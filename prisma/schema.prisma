@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  authUserId   String?  @unique // link to Supabase user AFTER approval
+  fullName     String
+  email        String   @unique
+  phone        String   @unique
+  role         Role     @default(STUDENT)
+  status       Status   @default(PENDING)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  requestedLevels RequestedLevel[]
+  studentLevels   StudentLevel[]
+  lessons         Lesson[]
+  attendance      Attendance[]
+  notes           Note[]
+}
+
+model Level {
+  id          String   @id @default(uuid())
+  name        String
+  trackType   TrackType
+  levelOrder  Int
+  description String?
+
+  requestedLevels RequestedLevel[]
+  studentLevels   StudentLevel[]
+
+  @@unique([trackType, levelOrder]) // prevents duplicate levels
+}
+
+model RequestedLevel {
+  id        String    @id @default(uuid())
+
+  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+
+  level     Level     @relation(fields: [levelId], references: [id])
+  levelId   String
+
+  trackType TrackType
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, trackType]) // one request per track
+}
+
+model StudentLevel {
+  id        String    @id @default(uuid())
+
+  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+
+  level     Level     @relation(fields: [levelId], references: [id])
+  levelId   String
+
+  trackType TrackType
+
+  assignedAt DateTime @default(now())
+
+  @@unique([studentId, trackType]) // only one active level per track
+}
+
+model Lesson {
+  id        String    @id @default(uuid())
+
+  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+
+  trackType TrackType
+  content   String
+  notes     String?
+  date      DateTime  @default(now())
+}
+
+model Attendance {
+  id        String    @id @default(uuid())
+
+  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+
+  status    AttendanceStatus
+  date      DateTime @default(now())
+
+  @@unique([studentId, date]) // no duplicate attendance per day
+}
+
+model Note {
+  id        String   @id @default(uuid())
+
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+
+  text      String
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum Status {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+enum TrackType {
+  QURAN
+  KITAB
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}

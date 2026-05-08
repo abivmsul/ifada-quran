@@ -36,6 +36,12 @@ export default function AdminDashboard() {
         >
           Lessons
         </Link>
+        <Link
+          href="/admin/levels"
+          className="border p-4 rounded"
+        >
+          Levels
+        </Link>
 
       </div>
     </div>

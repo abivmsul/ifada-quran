@@ -70,27 +70,48 @@ model StudentLevel {
 }
 
 model Lesson {
-  id        String    @id @default(uuid())
+  id          String    @id @default(uuid())
 
-  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId String
+  student     User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId   String
 
-  trackType TrackType
-  content   String
-  notes     String?
-  date      DateTime  @default(now())
+  trackType   TrackType
+
+  title       String?
+  content     String
+  notes       String?
+
+  // Quran-specific fields
+  surah       String?
+  fromAyah    Int?
+  toAyah      Int?
+  isRevision  Boolean   @default(false)
+
+  // Kitab-specific fields
+  kitabBook   String?
+  kitabChapter String?
+  topic       String?
+  homework    String?
+
+  date        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+
+  @@index([studentId, date])
+  @@index([trackType, date])
 }
-
 model Attendance {
   id        String    @id @default(uuid())
 
-  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student   User      @relation(fields: [studentId], references: [id])
   studentId String
 
   status    AttendanceStatus
-  date      DateTime @default(now())
 
-  @@unique([studentId, date]) // no duplicate attendance per day
+  date      DateTime
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, date])
 }
 
 model Note {

@@ -1,17 +1,16 @@
-// src/app/admin/students/[id]/page.tsx
-
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-
 import {
   ArrowLeft,
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  Clock3,
   GraduationCap,
   Mail,
   MapPin,
+  NotebookPen,
   Phone,
   ScrollText,
   ShieldCheck,
@@ -19,53 +18,98 @@ import {
   User,
   Users,
   ClipboardCheck,
-  NotebookPen,
-  Clock3,
 } from "lucide-react"
 
-type Props = {
+type PageProps = {
   params: Promise<{
     id: string
   }>
 }
 
-export default async function StudentDetailPage({
-  params,
-}: Props) {
+type Level = {
+  id: string
+  name: string
+  trackType: "QURAN" | "KITAB"
+  description: string | null
+}
+
+type StudentLevel = {
+  id: string
+  trackType: "QURAN" | "KITAB"
+  level: Level
+}
+
+type RequestedLevel = {
+  id: string
+  trackType: "QURAN" | "KITAB"
+  level: Level
+}
+
+type Attendance = {
+  id: string
+  status: "PRESENT" | "ABSENT"
+  date: Date
+}
+
+type Lesson = {
+  id: string
+  trackType: "QURAN" | "KITAB"
+  content: string
+  notes: string | null
+  date: Date
+}
+
+type Note = {
+  id: string
+  text: string
+  createdAt: Date
+}
+
+type Student = {
+  id: string
+  fullName: string
+  email: string
+  phone: string
+  address: string | null
+  isSponsored: boolean
+  emergencyContactName: string | null
+  emergencyContactPhone: string | null
+  createdAt: Date
+  studentLevels: StudentLevel[]
+  requestedLevels: RequestedLevel[]
+  attendance: Attendance[]
+  lessons: Lesson[]
+  notes: Note[]
+}
+
+export default async function StudentDetailPage({ params }: PageProps) {
   const { id } = await params
 
-  const student = await prisma.user.findUnique({
-    where: {
-      id,
-    },
-
+  const student = (await prisma.user.findUnique({
+    where: { id },
     include: {
       studentLevels: {
         include: {
           level: true,
         },
       },
-
       requestedLevels: {
         include: {
           level: true,
         },
       },
-
       attendance: {
         orderBy: {
           date: "desc",
         },
         take: 10,
       },
-
       lessons: {
         orderBy: {
           date: "desc",
         },
         take: 10,
       },
-
       notes: {
         orderBy: {
           createdAt: "desc",
@@ -73,23 +117,22 @@ export default async function StudentDetailPage({
         take: 10,
       },
     },
-  })
+  })) as Student | null
 
   if (!student) {
     notFound()
   }
 
   const quranLevel = student.studentLevels.find(
-    (sl) => sl.trackType === "QURAN"
+    (sl: StudentLevel) => sl.trackType === "QURAN"
   )
 
   const kitabLevel = student.studentLevels.find(
-    (sl) => sl.trackType === "KITAB"
+    (sl: StudentLevel) => sl.trackType === "KITAB"
   )
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      {/* TOP NAV */}
       <div className="flex items-center justify-between gap-4">
         <Link
           href="/admin/students"
@@ -100,7 +143,6 @@ export default async function StudentDetailPage({
         </Link>
       </div>
 
-      {/* HERO */}
       <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
         <div className="bg-gradient-to-r from-emerald-700 to-emerald-600 px-6 py-8 text-white">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -143,18 +185,13 @@ export default async function StudentDetailPage({
 
                   <div className="flex items-center gap-2 text-emerald-50">
                     <MapPin className="h-4 w-4" />
-                    <span>
-                      {student.address || "Address not provided"}
-                    </span>
+                    <span>{student.address || "Address not provided"}</span>
                   </div>
 
                   <div className="flex items-center gap-2 text-emerald-50">
                     <CalendarDays className="h-4 w-4" />
                     <span>
-                      Joined{" "}
-                      {new Date(
-                        student.createdAt
-                      ).toLocaleDateString()}
+                      Joined {new Date(student.createdAt).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
@@ -163,30 +200,21 @@ export default async function StudentDetailPage({
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-2xl bg-white/10 p-4 backdrop-blur">
-                <p className="text-sm text-emerald-50">
-                  Attendance
-                </p>
-
+                <p className="text-sm text-emerald-50">Attendance</p>
                 <h2 className="mt-1 text-2xl font-black">
                   {student.attendance.length}
                 </h2>
               </div>
 
               <div className="rounded-2xl bg-white/10 p-4 backdrop-blur">
-                <p className="text-sm text-emerald-50">
-                  Lessons
-                </p>
-
+                <p className="text-sm text-emerald-50">Lessons</p>
                 <h2 className="mt-1 text-2xl font-black">
                   {student.lessons.length}
                 </h2>
               </div>
 
-              <div className="rounded-2xl bg-white/10 p-4 backdrop-blur col-span-2 sm:col-span-1">
-                <p className="text-sm text-emerald-50">
-                  Notes
-                </p>
-
+              <div className="col-span-2 rounded-2xl bg-white/10 p-4 backdrop-blur sm:col-span-1">
+                <p className="text-sm text-emerald-50">Notes</p>
                 <h2 className="mt-1 text-2xl font-black">
                   {student.notes.length}
                 </h2>
@@ -195,7 +223,6 @@ export default async function StudentDetailPage({
           </div>
         </div>
 
-        {/* LEVELS */}
         <div className="grid gap-5 p-6 md:grid-cols-2">
           <div className="rounded-3xl border border-slate-200 p-5">
             <div className="mb-4 flex items-center gap-3">
@@ -204,20 +231,15 @@ export default async function StudentDetailPage({
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">
-                  Quran Track
-                </p>
-
+                <p className="text-sm text-slate-500">Quran Track</p>
                 <h3 className="text-lg font-black text-slate-900">
-                  {quranLevel?.level?.name ||
-                    "Not Assigned"}
+                  {quranLevel?.level?.name || "Not Assigned"}
                 </h3>
               </div>
             </div>
 
             <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
-              Current Quran memorization and learning
-              track.
+              Current Quran memorization and learning track.
             </div>
           </div>
 
@@ -228,46 +250,33 @@ export default async function StudentDetailPage({
               </div>
 
               <div>
-                <p className="text-sm text-slate-500">
-                  Kitab Track
-                </p>
-
+                <p className="text-sm text-slate-500">Kitab Track</p>
                 <h3 className="text-lg font-black text-slate-900">
-                  {kitabLevel?.level?.name ||
-                    "Not Assigned"}
+                  {kitabLevel?.level?.name || "Not Assigned"}
                 </h3>
               </div>
             </div>
 
             <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
-              Current Islamic studies and kitab learning
-              track.
+              Current Islamic studies and kitab learning track.
             </div>
           </div>
         </div>
       </section>
 
-      {/* INFO GRID */}
       <div className="grid gap-6 xl:grid-cols-3">
-        {/* LEFT */}
         <div className="space-y-6 xl:col-span-2">
-          {/* ATTENDANCE */}
           <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
-                  <ClipboardCheck className="h-6 w-6 text-emerald-700" />
-                </div>
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
+                <ClipboardCheck className="h-6 w-6 text-emerald-700" />
+              </div>
 
-                <div>
-                  <h2 className="text-xl font-black text-slate-900">
-                    Attendance History
-                  </h2>
-
-                  <p className="text-sm text-slate-500">
-                    Recent attendance records
-                  </p>
-                </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900">
+                  Attendance History
+                </h2>
+                <p className="text-sm text-slate-500">Recent attendance records</p>
               </div>
             </div>
 
@@ -278,7 +287,7 @@ export default async function StudentDetailPage({
                 </div>
               )}
 
-              {student.attendance.map((attendance) => (
+              {student.attendance.map((attendance: Attendance) => (
                 <div
                   key={attendance.id}
                   className="flex items-center justify-between rounded-2xl border border-slate-200 p-4"
@@ -304,11 +313,8 @@ export default async function StudentDetailPage({
                       <p className="font-bold text-slate-900">
                         {attendance.status}
                       </p>
-
                       <p className="text-sm text-slate-500">
-                        {new Date(
-                          attendance.date
-                        ).toLocaleDateString()}
+                        {new Date(attendance.date).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -327,7 +333,6 @@ export default async function StudentDetailPage({
             </div>
           </section>
 
-          {/* LESSONS */}
           <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
@@ -338,10 +343,7 @@ export default async function StudentDetailPage({
                 <h2 className="text-xl font-black text-slate-900">
                   Recent Lessons
                 </h2>
-
-                <p className="text-sm text-slate-500">
-                  Latest lesson records
-                </p>
+                <p className="text-sm text-slate-500">Latest lesson records</p>
               </div>
             </div>
 
@@ -352,15 +354,11 @@ export default async function StudentDetailPage({
                 </div>
               )}
 
-              {student.lessons.map((lesson) => (
-                <div
-                  key={lesson.id}
-                  className="rounded-2xl border border-slate-200 p-5"
-                >
+              {student.lessons.map((lesson: Lesson) => (
+                <div key={lesson.id} className="rounded-2xl border border-slate-200 p-5">
                   <div className="mb-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                       <GraduationCap className="h-5 w-5 text-emerald-700" />
-
                       <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
                         {lesson.trackType}
                       </span>
@@ -368,16 +366,11 @@ export default async function StudentDetailPage({
 
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <Clock3 className="h-4 w-4" />
-
-                      {new Date(
-                        lesson.date
-                      ).toLocaleDateString()}
+                      {new Date(lesson.date).toLocaleDateString()}
                     </div>
                   </div>
 
-                  <p className="font-semibold text-slate-900">
-                    {lesson.content}
-                  </p>
+                  <p className="font-semibold text-slate-900">{lesson.content}</p>
 
                   {lesson.notes && (
                     <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
@@ -390,9 +383,7 @@ export default async function StudentDetailPage({
           </section>
         </div>
 
-        {/* RIGHT */}
         <div className="space-y-6">
-          {/* EMERGENCY */}
           <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
@@ -403,7 +394,6 @@ export default async function StudentDetailPage({
                 <h2 className="text-xl font-black text-slate-900">
                   Emergency Contact
                 </h2>
-
                 <p className="text-sm text-slate-500">
                   Parent or guardian information
                 </p>
@@ -412,30 +402,21 @@ export default async function StudentDetailPage({
 
             <div className="space-y-5">
               <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="mb-2 text-sm text-slate-500">
-                  Contact Person
-                </p>
-
+                <p className="mb-2 text-sm text-slate-500">Contact Person</p>
                 <p className="font-bold text-slate-900">
-                  {student.emergencyContactName ||
-                    "Not provided"}
+                  {student.emergencyContactName || "Not provided"}
                 </p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="mb-2 text-sm text-slate-500">
-                  Contact Phone
-                </p>
-
+                <p className="mb-2 text-sm text-slate-500">Contact Phone</p>
                 <p className="font-bold text-slate-900">
-                  {student.emergencyContactPhone ||
-                    "Not provided"}
+                  {student.emergencyContactPhone || "Not provided"}
                 </p>
               </div>
             </div>
           </section>
 
-          {/* REQUESTED LEVELS */}
           <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
@@ -446,10 +427,7 @@ export default async function StudentDetailPage({
                 <h2 className="text-xl font-black text-slate-900">
                   Requested Levels
                 </h2>
-
-                <p className="text-sm text-slate-500">
-                  Registration preferences
-                </p>
+                <p className="text-sm text-slate-500">Registration preferences</p>
               </div>
             </div>
 
@@ -460,7 +438,7 @@ export default async function StudentDetailPage({
                 </div>
               )}
 
-              {student.requestedLevels.map((rl) => (
+              {student.requestedLevels.map((rl: RequestedLevel) => (
                 <div
                   key={rl.id}
                   className="flex items-center justify-between rounded-2xl border border-slate-200 p-4"
@@ -474,10 +452,7 @@ export default async function StudentDetailPage({
                       <p className="font-bold text-slate-900">
                         {rl.level?.name}
                       </p>
-
-                      <p className="text-sm text-slate-500">
-                        {rl.trackType}
-                      </p>
+                      <p className="text-sm text-slate-500">{rl.trackType}</p>
                     </div>
                   </div>
 

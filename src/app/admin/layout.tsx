@@ -173,10 +173,10 @@ export default function AdminLayout({
                 {studentsOpen && (
                   <div className="mt-2 space-y-1 pl-2">
                     <Link
-                      href="/register"
+                      href="/admin/register-student"
                       onClick={() => setMobileOpen(false)}
                       className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
-                        pathname === "/register"
+                        pathname === "/admin/register-student"
                           ? "bg-white text-emerald-900"
                           : "text-slate-700 hover:bg-white"
                       }`}

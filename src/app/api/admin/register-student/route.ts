@@ -34,33 +34,42 @@ export async function POST(req: Request) {
         emergencyContactPhone: emergencyContactPhone || null,
         isSponsored: Boolean(isSponsored),
         role: "STUDENT",
-        status: "PENDING",
+        status: "ACTIVE",
+        approvedAt: new Date(),
       },
     })
 
-    if (quranLevelId) {
-      await prisma.requestedLevel.create({
-        data: {
-          studentId: user.id,
-          levelId: quranLevelId,
-          trackType: "QURAN",
-        },
-      })
-    }
+    const studentLevelsData = [
+      quranLevelId
+        ? {
+            studentId: user.id,
+            levelId: quranLevelId,
+            trackType: "QURAN" as const,
+          }
+        : null,
+      kitabLevelId
+        ? {
+            studentId: user.id,
+            levelId: kitabLevelId,
+            trackType: "KITAB" as const,
+          }
+        : null,
+    ].filter(Boolean) as {
+      studentId: string
+      levelId: string
+      trackType: "QURAN" | "KITAB"
+    }[]
 
-    if (kitabLevelId) {
-      await prisma.requestedLevel.create({
-        data: {
-          studentId: user.id,
-          levelId: kitabLevelId,
-          trackType: "KITAB",
-        },
+    if (studentLevelsData.length) {
+      await prisma.studentLevel.createMany({
+        data: studentLevelsData,
+        skipDuplicates: true,
       })
     }
 
     return NextResponse.json({
       success: true,
-      message: "Registered successfully. Waiting for admin approval.",
+      message: "Student created and approved successfully.",
     })
   } catch (error: any) {
     console.error(error)
@@ -73,7 +82,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(
-      { error: "Registration failed" },
+      { error: "Admin student creation failed" },
       { status: 500 }
     )
   }

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-
+import { Prisma } from "@prisma/client"
 import {
   ArrowLeft,
   BookOpen,
@@ -29,12 +29,34 @@ type Props = {
   }>
 }
 
+type StudentWithRelations = Prisma.UserGetPayload<{
+  include: {
+    studentLevels: {
+      include: {
+        level: true
+      }
+    }
+
+    requestedLevels: {
+      include: {
+        level: true
+      }
+    }
+
+    attendance: true
+    lessons: true
+    notes: true
+  }
+}>
+
 export default async function StudentDetailPage({
   params,
 }: Props) {
   const { id } = await params
 
-  const student = await prisma.user.findUnique({
+  
+  const student: StudentWithRelations | null =
+  await prisma.user.findUnique({
     where: {
       id,
     },

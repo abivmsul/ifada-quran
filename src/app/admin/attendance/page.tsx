@@ -318,11 +318,11 @@ export default function AttendancePage() {
                         {sl.level?.name}
                       </div>
 
-                      {sl.level?.description && (
+                      {/* {sl.level?.description && (
                         <div className="mt-2 text-sm leading-6 text-slate-600">
                           {sl.level.description}
                         </div>
-                      )}
+                      )} */}
                     </div>
                   ))}
                 </div>

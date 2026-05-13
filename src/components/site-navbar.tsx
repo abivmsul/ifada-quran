@@ -8,7 +8,7 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/#about", label: "About Us" },
   { href: "/#features", label: "Features" },
-  { href: "/admin/students", label: "Dashboard" },
+  { href: "/admin", label: "Dashboard" },
   { href: "/#contact", label: "Contact" },
 ]
 
@@ -60,7 +60,7 @@ export default function SiteNavbar() {
           </Link>
 
           <Link
-            href="/admin/students"
+            href="/admin"
             className="rounded-xl bg-emerald-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
           >
             Admin Dashboard
@@ -100,7 +100,7 @@ export default function SiteNavbar() {
               </Link>
 
               <Link
-                href="/admin/students"
+                href="/admin"
                 onClick={() => setOpen(false)}
                 className="rounded-xl bg-emerald-900 px-4 py-3 text-center text-sm font-semibold text-white"
               >

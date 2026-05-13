@@ -35,16 +35,27 @@ type Level = {
   description: string | null
 }
 
+type Schedule = {
+  id: string
+  dayOfWeek: string
+  startTime: string
+  endTime: string
+  mode: "ONLINE" | "IN_PERSON" | "BOTH"
+  location: string | null
+}
+
 type StudentLevel = {
   id: string
   trackType: "QURAN" | "KITAB"
   level: Level
+  schedule: Schedule | null
 }
 
 type RequestedLevel = {
   id: string
   trackType: "QURAN" | "KITAB"
   level: Level
+  schedule: Schedule | null
 }
 
 type Attendance = {
@@ -105,6 +116,12 @@ function formatDate(value: Date | null | undefined) {
   return new Date(value).toLocaleDateString()
 }
 
+function formatSchedule(schedule: Schedule | null) {
+  if (!schedule) return "Not assigned"
+  const location = schedule.location ? ` • ${schedule.location}` : ""
+  return `${schedule.dayOfWeek} • ${schedule.startTime} → ${schedule.endTime} • ${schedule.mode}${location}`
+}
+
 export default async function StudentDetailPage({ params }: PageProps) {
   const { id } = await params
 
@@ -115,11 +132,13 @@ export default async function StudentDetailPage({ params }: PageProps) {
       studentLevels: {
         include: {
           level: true,
+          schedule: true,
         },
       },
       requestedLevels: {
         include: {
           level: true,
+          schedule: true,
         },
       },
       attendance: {
@@ -148,12 +167,23 @@ export default async function StudentDetailPage({ params }: PageProps) {
   }
 
   const quranLevel = student.studentLevels.find(
-    (sl: StudentLevel) => sl.trackType === "QURAN"
+    (sl) => sl.trackType === "QURAN"
   )
 
   const kitabLevel = student.studentLevels.find(
-    (sl: StudentLevel) => sl.trackType === "KITAB"
+    (sl) => sl.trackType === "KITAB"
   )
+
+  const quranRequested = student.requestedLevels.find(
+    (rl) => rl.trackType === "QURAN"
+  )
+
+  const kitabRequested = student.requestedLevels.find(
+    (rl) => rl.trackType === "KITAB"
+  )
+
+  const quranSchedule = quranRequested?.schedule ?? quranLevel?.schedule ?? null
+  const kitabSchedule = kitabRequested?.schedule ?? kitabLevel?.schedule ?? null
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -167,6 +197,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
         </Link>
       </div>
 
+      {/* HERO */}
       <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
         <div className="bg-gradient-to-r from-emerald-700 to-emerald-600 px-6 py-8 text-white">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -249,6 +280,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
           </div>
         </div>
 
+        {/* OVERVIEW CARDS */}
         <div className="grid gap-5 p-6 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-3xl border border-slate-200 p-5">
             <div className="mb-4 flex items-center gap-3">
@@ -429,10 +461,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
               </div>
               <div>
                 <h2 className="text-xl font-black text-slate-900">
-                  Requested Levels
+                  Requested Levels & Schedules
                 </h2>
                 <p className="text-sm text-slate-500">
-                  The student’s requested learning tracks
+                  The student’s requested learning tracks and timing
                 </p>
               </div>
             </div>
@@ -443,9 +475,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
                   Quran
                 </p>
                 <p className="mt-2 text-sm font-semibold text-slate-900">
-                  {student.requestedLevels.find(
-                    (rl) => rl.trackType === "QURAN"
-                  )?.level.name || "Not requested"}
+                  {quranRequested?.level?.name || "Not requested"}
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  {quranSchedule ? formatSchedule(quranSchedule) : "No schedule selected"}
                 </p>
               </div>
 
@@ -454,9 +487,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
                   Kitab
                 </p>
                 <p className="mt-2 text-sm font-semibold text-slate-900">
-                  {student.requestedLevels.find(
-                    (rl) => rl.trackType === "KITAB"
-                  )?.level.name || "Not requested"}
+                  {kitabRequested?.level?.name || "Not requested"}
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  {kitabSchedule ? formatSchedule(kitabSchedule) : "No schedule selected"}
                 </p>
               </div>
             </div>
@@ -596,6 +630,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
                     <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
                       Requested
                     </div>
+                  </div>
+
+                  <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                    {rl.schedule ? formatSchedule(rl.schedule) : "No schedule selected"}
                   </div>
                 </div>
               ))}

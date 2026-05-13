@@ -18,7 +18,6 @@ import {
   ScrollText,
   ShieldCheck,
   Sparkles,
-  User,
   Users,
 } from "lucide-react"
 
@@ -117,7 +116,7 @@ function formatDate(value: Date | null | undefined) {
   return new Date(value).toLocaleDateString()
 }
 
-function formatTime(schedule: Schedule | null) {
+function formatSchedule(schedule: Schedule | null) {
   if (!schedule) return "Not assigned"
   const location = schedule.location ? ` • ${schedule.location}` : ""
   return `${schedule.dayOfWeek} • ${schedule.startTime} → ${schedule.endTime} • ${schedule.mode}${location}`
@@ -168,20 +167,23 @@ export default async function StudentDetailPage({ params }: PageProps) {
   }
 
   const quranLevel = student.studentLevels.find(
-    (sl: StudentLevel) => sl.trackType === "QURAN"
+    (sl) => sl.trackType === "QURAN"
   )
 
   const kitabLevel = student.studentLevels.find(
-    (sl: StudentLevel) => sl.trackType === "KITAB"
+    (sl) => sl.trackType === "KITAB"
   )
 
   const quranRequested = student.requestedLevels.find(
-    (rl: RequestedLevel) => rl.trackType === "QURAN"
+    (rl) => rl.trackType === "QURAN"
   )
 
   const kitabRequested = student.requestedLevels.find(
-    (rl: RequestedLevel) => rl.trackType === "KITAB"
+    (rl) => rl.trackType === "KITAB"
   )
+
+  const quranSchedule = quranRequested?.schedule ?? quranLevel?.schedule ?? null
+  const kitabSchedule = kitabRequested?.schedule ?? kitabLevel?.schedule ?? null
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -195,6 +197,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
         </Link>
       </div>
 
+      {/* HERO */}
       <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
         <div className="bg-gradient-to-r from-emerald-700 to-emerald-600 px-6 py-8 text-white">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -277,6 +280,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
           </div>
         </div>
 
+        {/* OVERVIEW CARDS */}
         <div className="grid gap-5 p-6 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-3xl border border-slate-200 p-5">
             <div className="mb-4 flex items-center gap-3">
@@ -285,7 +289,9 @@ export default async function StudentDetailPage({ params }: PageProps) {
               </div>
               <div>
                 <p className="text-sm text-slate-500">Personal Info</p>
-                <h3 className="text-lg font-black text-slate-900">Age & Gender</h3>
+                <h3 className="text-lg font-black text-slate-900">
+                  Age & Gender
+                </h3>
               </div>
             </div>
 
@@ -347,11 +353,9 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
             <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
               <p className="font-semibold text-slate-900">
-                {quranRequested?.schedule
-                  ? formatTime(quranRequested.schedule)
-                  : quranLevel?.schedule
-                    ? formatTime(quranLevel.schedule)
-                    : "No schedule selected"}
+                {quranLevel?.level
+                  ? `${quranLevel.level.trackType} • Level ${quranLevel.level.levelOrder}`
+                  : "No Quran level assigned"}
               </p>
             </div>
           </div>
@@ -371,11 +375,9 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
             <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
               <p className="font-semibold text-slate-900">
-                {kitabRequested?.schedule
-                  ? formatTime(kitabRequested.schedule)
-                  : kitabLevel?.schedule
-                    ? formatTime(kitabLevel.schedule)
-                    : "No schedule selected"}
+                {kitabLevel?.level
+                  ? `${kitabLevel.level.trackType} • Level ${kitabLevel.level.levelOrder}`
+                  : "No Kitab level assigned"}
               </p>
             </div>
           </div>
@@ -459,10 +461,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
               </div>
               <div>
                 <h2 className="text-xl font-black text-slate-900">
-                  Current / Requested Schedules
+                  Requested Levels & Schedules
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Level timing and attendance setup
+                  The student’s requested learning tracks and timing
                 </p>
               </div>
             </div>
@@ -470,27 +472,25 @@ export default async function StudentDetailPage({ params }: PageProps) {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Quran Schedule
+                  Quran
                 </p>
                 <p className="mt-2 text-sm font-semibold text-slate-900">
-                  {quranRequested?.schedule
-                    ? formatTime(quranRequested.schedule)
-                    : quranLevel?.schedule
-                      ? formatTime(quranLevel.schedule)
-                      : "No schedule selected"}
+                  {quranRequested?.level?.name || "Not requested"}
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  {quranSchedule ? formatSchedule(quranSchedule) : "No schedule selected"}
                 </p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Kitab Schedule
+                  Kitab
                 </p>
                 <p className="mt-2 text-sm font-semibold text-slate-900">
-                  {kitabRequested?.schedule
-                    ? formatTime(kitabRequested.schedule)
-                    : kitabLevel?.schedule
-                      ? formatTime(kitabLevel.schedule)
-                      : "No schedule selected"}
+                  {kitabRequested?.level?.name || "Not requested"}
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  {kitabSchedule ? formatSchedule(kitabSchedule) : "No schedule selected"}
                 </p>
               </div>
             </div>
@@ -519,7 +519,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
               )}
 
               {student.lessons.map((lesson) => (
-                <div key={lesson.id} className="rounded-2xl border border-slate-200 p-5">
+                <div
+                  key={lesson.id}
+                  className="rounded-2xl border border-slate-200 p-5"
+                >
                   <div className="mb-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                       <GraduationCap className="h-5 w-5 text-emerald-700" />
@@ -596,7 +599,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
               </div>
               <div>
                 <h2 className="text-xl font-black text-slate-900">
-                  Requested Levels
+                  Requested Details
                 </h2>
                 <p className="text-sm text-slate-500">
                   Registration preferences
@@ -630,7 +633,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
                   </div>
 
                   <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
-                    {rl.schedule ? formatTime(rl.schedule) : "No schedule selected"}
+                    {rl.schedule ? formatSchedule(rl.schedule) : "No schedule selected"}
                   </div>
                 </div>
               ))}

@@ -1,31 +1,32 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import {
   CheckCircle2,
   Clock3,
+  Filter,
   GraduationCap,
+  Mail,
   MapPin,
   Phone,
   Search,
   ShieldCheck,
-  User,
+  UserCheck,
   Users,
   XCircle,
-  Mail,
 } from "lucide-react"
 
-type Level = {
+type LevelRef = {
   id: string
   name: string
   trackType: "QURAN" | "KITAB"
-  description?: string | null
 }
 
 type RequestedLevel = {
   id: string
   trackType: "QURAN" | "KITAB"
-  level: Level
+  level: LevelRef
 }
 
 type Student = {
@@ -33,8 +34,13 @@ type Student = {
   fullName: string
   email: string
   phone: string
-  address?: string | null
-  isSponsored?: boolean
+  age: number | null
+  gender: string | null
+  address: string | null
+  isSponsored: boolean
+  sponsor?: {
+    name: string
+  } | null
   emergencyContactName?: string | null
   emergencyContactPhone?: string | null
   createdAt: string
@@ -43,26 +49,21 @@ type Student = {
 
 export default function PendingStudentsPage() {
   const [students, setStudents] = useState<Student[]>([])
-  const [levels, setLevels] = useState<Level[]>([])
   const [loading, setLoading] = useState(true)
 
   const [search, setSearch] = useState("")
-  const [quranLevel, setQuranLevel] = useState("")
-  const [kitabLevel, setKitabLevel] = useState("")
-
-  async function loadLevels() {
-    const res = await fetch("/api/levels")
-    const data = await res.json()
-    setLevels(data)
-  }
+  const [sponsored, setSponsored] = useState("")
+  const [trackType, setTrackType] = useState("")
+  const [gender, setGender] = useState("")
 
   async function loadStudents() {
     setLoading(true)
 
     const params = new URLSearchParams()
     if (search) params.set("search", search)
-    if (quranLevel) params.set("quranLevel", quranLevel)
-    if (kitabLevel) params.set("kitabLevel", kitabLevel)
+    if (sponsored) params.set("sponsored", sponsored)
+    if (trackType) params.set("trackType", trackType)
+    if (gender) params.set("gender", gender)
 
     const res = await fetch(`/api/admin/pending?${params.toString()}`)
     const data = await res.json()
@@ -72,12 +73,8 @@ export default function PendingStudentsPage() {
   }
 
   useEffect(() => {
-    loadLevels()
-  }, [])
-
-  useEffect(() => {
     loadStudents()
-  }, [search, quranLevel, kitabLevel])
+  }, [search, sponsored, trackType, gender])
 
   async function approveStudent(studentId: string) {
     const res = await fetch("/api/admin/approve", {
@@ -95,12 +92,11 @@ export default function PendingStudentsPage() {
       return
     }
 
-    alert("Student approved successfully")
     loadStudents()
   }
 
   async function rejectStudent(studentId: string) {
-    const confirmed = confirm("Are you sure you want to reject this student?")
+    const confirmed = confirm("Reject this student registration?")
     if (!confirmed) return
 
     const res = await fetch("/api/admin/reject", {
@@ -118,23 +114,24 @@ export default function PendingStudentsPage() {
       return
     }
 
-    alert("Student rejected")
     loadStudents()
   }
 
-  const quranLevels = useMemo(
-    () => levels.filter((l) => l.trackType === "QURAN"),
-    [levels]
-  )
-
-  const kitabLevels = useMemo(
-    () => levels.filter((l) => l.trackType === "KITAB"),
-    [levels]
-  )
+  const summary = useMemo(() => {
+    return {
+      pending: students.length,
+      sponsored: students.filter((s) => s.isSponsored).length,
+      quran: students.filter((s) =>
+        s.requestedLevels.some((rl) => rl.trackType === "QURAN")
+      ).length,
+      kitab: students.filter((s) =>
+        s.requestedLevels.some((rl) => rl.trackType === "KITAB")
+      ).length,
+    }
+  }, [students])
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      {/* Header */}
       <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -143,270 +140,337 @@ export default function PendingStudentsPage() {
               Pending Students
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              Review newly registered students, check their details, and approve or reject them.
+              Review new registrations and approve or reject them from a compact list.
             </p>
           </div>
 
-          <div className="w-full max-w-xs rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
-                <Clock3 className="h-6 w-6 text-emerald-700" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100">
+                  <Clock3 className="h-5 w-5 text-amber-700" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Pending</p>
+                  <h2 className="text-2xl font-black text-slate-900">
+                    {summary.pending}
+                  </h2>
+                </div>
               </div>
+            </div>
 
-              <div>
-                <p className="text-sm text-slate-500">Waiting Approval</p>
-                <h2 className="text-2xl font-black text-slate-900">{students.length}</h2>
+            <div className="rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100">
+                  <UserCheck className="h-5 w-5 text-emerald-700" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Sponsored</p>
+                  <h2 className="text-2xl font-black text-slate-900">
+                    {summary.sponsored}
+                  </h2>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100">
+                  <GraduationCap className="h-5 w-5 text-emerald-700" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Quran</p>
+                  <h2 className="text-2xl font-black text-slate-900">
+                    {summary.quran}
+                  </h2>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100">
+                  <GraduationCap className="h-5 w-5 text-emerald-700" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Kitab</p>
+                  <h2 className="text-2xl font-black text-slate-900">
+                    {summary.kitab}
+                  </h2>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Filters */}
       <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-4 flex items-center gap-2">
-          <Search className="h-5 w-5 text-emerald-700" />
+          <Filter className="h-5 w-5 text-emerald-700" />
           <h2 className="text-lg font-bold text-slate-900">Filters</h2>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
             <Search className="h-5 w-5 shrink-0 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by name, email, phone"
+              placeholder="Search name, email, phone"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
             />
-          </div>
+          </label>
 
           <select
-            value={quranLevel}
-            onChange={(e) => setQuranLevel(e.target.value)}
+            value={sponsored}
+            onChange={(e) => setSponsored(e.target.value)}
             className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none"
           >
-            <option value="">All Quran Levels</option>
-            {quranLevels.map((level) => (
-              <option key={level.id} value={level.id}>
-                {level.name}
-              </option>
-            ))}
+            <option value="">All Sponsorships</option>
+            <option value="true">Sponsored</option>
+            <option value="false">Self Sponsored</option>
           </select>
 
           <select
-            value={kitabLevel}
-            onChange={(e) => setKitabLevel(e.target.value)}
+            value={trackType}
+            onChange={(e) => setTrackType(e.target.value)}
             className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none"
           >
-            <option value="">All Kitab Levels</option>
-            {kitabLevels.map((level) => (
-              <option key={level.id} value={level.id}>
-                {level.name}
-              </option>
-            ))}
+            <option value="">All Tracks</option>
+            <option value="QURAN">Quran</option>
+            <option value="KITAB">Kitab</option>
+          </select>
+
+          <select
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none"
+          >
+            <option value="">All Genders</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+            <option value="OTHER">Other</option>
+            <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
           </select>
         </div>
       </section>
 
-      {/* Loading */}
-      {loading && (
-        <div className="rounded-3xl border border-emerald-100 bg-white p-10 text-center shadow-sm">
-          <p className="text-slate-600">Loading pending students...</p>
-        </div>
-      )}
-
-      {/* Empty */}
-      {!loading && students.length === 0 && (
-        <div className="rounded-3xl border border-emerald-100 bg-white p-12 text-center shadow-sm">
-          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
-            <CheckCircle2 className="h-10 w-10 text-emerald-700" />
+      <section className="rounded-3xl border border-emerald-100 bg-white shadow-sm">
+        {loading ? (
+          <div className="p-10 text-center text-slate-500">Loading students...</div>
+        ) : students.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+              <CheckCircle2 className="h-10 w-10 text-emerald-700" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-900">
+              No Pending Students
+            </h2>
+            <p className="mt-2 text-slate-600">
+              No registrations match the current filters.
+            </p>
           </div>
+        ) : (
+          <>
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full min-w-[1400px]">
+                <thead className="border-b border-slate-200 bg-slate-50">
+                  <tr className="text-left">
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Student</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Contact</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Details</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Levels</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Sponsor</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Emergency</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.map((student) => (
+                    <tr key={student.id} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="px-6 py-5">
+                        <div>
+                          <h3 className="font-bold text-slate-900">{student.fullName}</h3>
+                          <p className="text-sm text-slate-500">
+                            {student.createdAt
+                              ? new Date(student.createdAt).toLocaleDateString()
+                              : ""}
+                          </p>
+                        </div>
+                      </td>
 
-          <h2 className="text-2xl font-black text-slate-900">
-            No Pending Students
-          </h2>
+                      <td className="px-6 py-5">
+                        <div className="space-y-1">
+                          <p className="text-sm text-slate-900">{student.phone}</p>
+                          <p className="text-sm text-slate-500">{student.email}</p>
+                          <p className="text-xs text-slate-400">{student.address || "No address"}</p>
+                        </div>
+                      </td>
 
-          <p className="mt-2 text-slate-600">
-            All student registrations are already reviewed.
-          </p>
-        </div>
-      )}
+                      <td className="px-6 py-5">
+                        <div className="space-y-1 text-sm text-slate-700">
+                          <p>
+                            <span className="font-semibold">Age:</span>{" "}
+                            {student.age ?? "-"}
+                          </p>
+                          <p>
+                            <span className="font-semibold">Gender:</span>{" "}
+                            {student.gender || "-"}
+                          </p>
+                        </div>
+                      </td>
 
-      {/* Cards */}
-      {!loading && students.length > 0 && (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          {students.map((student) => {
-            const quranRequested = student.requestedLevels.find(
-              (rl) => rl.trackType === "QURAN"
-            )
-            const kitabRequested = student.requestedLevels.find(
-              (rl) => rl.trackType === "KITAB"
-            )
+                      <td className="px-6 py-5">
+                        <div className="flex flex-wrap gap-2">
+                          {student.requestedLevels?.map((rl) => (
+                            <div
+                              key={rl.id}
+                              className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"
+                            >
+                              {rl.level.name}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
 
-            return (
-              <div
-                key={student.id}
-                className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm transition hover:shadow-lg"
-              >
-                {/* Top bar */}
-                <div className="bg-gradient-to-r from-emerald-700 to-emerald-600 px-5 py-5 text-white sm:px-6">
+                      <td className="px-6 py-5">
+                        {student.isSponsored ? (
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              {student.sponsor?.name || "Sponsored"}
+                            </p>
+                            <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-bold text-amber-700">
+                              Sponsored
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                            Self Sponsored
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-5">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {student.emergencyContactName || "-"}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {student.emergencyContactPhone || "-"}
+                          </p>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-5">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => approveStudent(student.id)}
+                            className="h-10 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white transition hover:bg-emerald-800"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => rejectStudent(student.id)}
+                            className="h-10 rounded-xl border border-rose-200 px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-50"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid gap-4 p-4 lg:hidden">
+              {students.map((student) => (
+                <div
+                  key={student.id}
+                  className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+                >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 items-center gap-4">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-                        <Users className="h-7 w-7" />
-                      </div>
-
-                      <div className="min-w-0">
-                        <h2 className="truncate text-xl font-black sm:text-2xl">
-                          {student.fullName}
-                        </h2>
-
-                        <div className="mt-1 flex items-center gap-2 text-emerald-50">
-                          <Mail className="h-4 w-4 shrink-0" />
-                          <p className="truncate text-sm">{student.email}</p>
-                        </div>
-
-                        <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-sm">
-                          <Clock3 className="h-4 w-4" />
-                          Pending Approval
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0">
-                      {student.isSponsored ? (
-                        <div className="rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950">
-                          Sponsored
-                        </div>
-                      ) : (
-                        <div className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
-                          Self Sponsored
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="space-y-5 p-5 sm:p-6">
-                  {/* Basic info */}
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-2xl border border-slate-200 p-4">
-                      <div className="mb-2 flex items-center gap-2 text-slate-500">
-                        <Phone className="h-4 w-4" />
-                        <span className="text-sm font-medium">Phone</span>
-                      </div>
-                      <p className="font-bold text-slate-900">
-                        {student.phone || "N/A"}
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900">
+                        {student.fullName}
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        {student.gender || "-"} • Age {student.age ?? "-"}
                       </p>
                     </div>
 
+                    {student.isSponsored ? (
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+                        Sponsored
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                        Self Sponsored
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-2xl border border-slate-200 p-4">
-                      <div className="mb-2 flex items-center gap-2 text-slate-500">
-                        <MapPin className="h-4 w-4" />
-                        <span className="text-sm font-medium">Address</span>
-                      </div>
-                      <p className="font-bold text-slate-900">
-                        {student.address || "Not provided"}
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        Contact
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">
+                        {student.phone}
+                      </p>
+                      <p className="text-sm text-slate-500">{student.email}</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        Emergency
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">
+                        {student.emergencyContactName || "-"}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {student.emergencyContactPhone || "-"}
                       </p>
                     </div>
                   </div>
 
-                  {/* Emergency contact */}
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-                    <div className="mb-4 flex items-center gap-2">
-                      <ShieldCheck className="h-5 w-5 text-emerald-700" />
-                      <h3 className="font-black text-slate-900">
-                        Emergency Contact
-                      </h3>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <p className="mb-1 text-sm text-slate-500">Contact Person</p>
-                        <p className="font-bold text-slate-900">
-                          {student.emergencyContactName || "Not provided"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="mb-1 text-sm text-slate-500">Contact Phone</p>
-                        <p className="font-bold text-slate-900">
-                          {student.emergencyContactPhone || "Not provided"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Requested levels */}
-                  <div>
-                    <div className="mb-4 flex items-center gap-2">
-                      <GraduationCap className="h-5 w-5 text-emerald-700" />
-                      <h3 className="font-black text-slate-900">
-                        Requested Levels
-                      </h3>
-                    </div>
-
-                    <div className="space-y-3">
-                      {student.requestedLevels?.length === 0 && (
-                        <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-                          No requested levels selected.
-                        </div>
-                      )}
-
-                      {student.requestedLevels?.map((rl: any) => (
-                        <div
+                  <div className="mt-4 rounded-2xl border border-slate-200 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Requested Levels
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {student.requestedLevels?.map((rl) => (
+                        <span
                           key={rl.id}
-                          className="flex items-center justify-between rounded-2xl border border-slate-200 p-4"
+                          className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"
                         >
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100">
-                              <User className="h-5 w-5 text-emerald-700" />
-                            </div>
-
-                            <div className="min-w-0">
-                              <p className="truncate font-bold text-slate-900">
-                                {rl.level?.name}
-                              </p>
-                              <p className="text-sm text-slate-500">
-                                {rl.trackType}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                            Requested
-                          </div>
-                        </div>
+                          {rl.level.name}
+                        </span>
                       ))}
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                  <div className="mt-4 flex gap-2">
                     <button
                       onClick={() => approveStudent(student.id)}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 py-3 font-bold text-white transition hover:bg-emerald-800"
+                      className="flex-1 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-800"
                     >
-                      <CheckCircle2 className="h-5 w-5" />
-                      Approve Student
+                      Approve
                     </button>
-
                     <button
                       onClick={() => rejectStudent(student.id)}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 font-bold text-rose-700 transition hover:bg-rose-100"
+                      className="flex-1 rounded-2xl border border-rose-200 px-4 py-3 text-sm font-bold text-rose-700 transition hover:bg-rose-50"
                     >
-                      <XCircle className="h-5 w-5" />
                       Reject
                     </button>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+              ))}
+            </div>
+          </>
+        )}
+      </section>
     </main>
   )
 }

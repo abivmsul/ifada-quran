@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   UserPlus,
+  HandCoins,
 } from "lucide-react"
 
 export default function AdminLayout({
@@ -255,7 +256,26 @@ export default function AdminLayout({
                 </div>
                 <span className="font-bold">Lessons</span>
               </Link>
-
+                  <Link
+                      href="/admin/sponsors"
+                      onClick={() => setMobileOpen(false)}
+                      className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
+                        pathname.startsWith("/admin/sponsors")
+                          ? "bg-emerald-900 text-white shadow-md"
+                          : "text-slate-700 hover:bg-emerald-900 hover:text-white"
+                      }`}
+                    >
+                      <div
+                        className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
+                          pathname.startsWith("/admin/sponsors")
+                            ? "bg-white/10"
+                            : "bg-emerald-50 group-hover:bg-white/10"
+                        }`}
+                      >
+                        <HandCoins className="h-5 w-5" />
+                      </div>
+                      <span className="font-bold">Sponsors</span>
+                    </Link>
               <Link
                 href="/admin/levels"
                 onClick={() => setMobileOpen(false)}

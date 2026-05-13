@@ -4,48 +4,47 @@ import { prisma } from "@/lib/prisma"
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { userId } = body ?? {}
+    const studentId = body.studentId || body.userId
 
-    if (!userId) {
-      return NextResponse.json({ error: "Missing userId" }, { status: 400 })
+    if (!studentId) {
+      return NextResponse.json({ error: "Missing studentId" }, { status: 400 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
       include: {
         requestedLevels: true,
       },
     })
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!student) {
+      return NextResponse.json({ error: "Student not found" }, { status: 404 })
     }
 
-    if (user.status !== "PENDING") {
+    if (student.status !== "PENDING") {
       return NextResponse.json(
-        { error: "User is not pending" },
+        { error: "Student is not pending" },
         { status: 400 }
       )
     }
 
-    const studentLevelsData = user.requestedLevels.map((rl) => ({
-      studentId: user.id,
-      levelId: rl.levelId,
-      trackType: rl.trackType,
-    }))
-
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
-        where: { id: userId },
+        where: { id: studentId },
         data: {
           status: "ACTIVE",
           approvedAt: new Date(),
         },
       })
 
-      if (studentLevelsData.length) {
+      if (student.requestedLevels.length > 0) {
         await tx.studentLevel.createMany({
-          data: studentLevelsData,
+          data: student.requestedLevels.map((rl) => ({
+            studentId,
+            levelId: rl.levelId,
+            trackType: rl.trackType,
+            scheduleId: rl.scheduleId,
+          })),
           skipDuplicates: true,
         })
       }
@@ -54,9 +53,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error(error)
-    return NextResponse.json(
-      { error: "Approval failed" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Approval failed" }, { status: 500 })
   }
 }

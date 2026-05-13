@@ -1,23 +1,25 @@
+// src/app/admin/students/[id]/page.tsx
+
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import {
   ArrowLeft,
+  BadgeCheck,
   BookOpen,
   CalendarDays,
   CheckCircle2,
   Clock3,
+  ClipboardCheck,
   GraduationCap,
   Mail,
   MapPin,
-  NotebookPen,
   Phone,
   ScrollText,
   ShieldCheck,
   Sparkles,
   User,
   Users,
-  ClipboardCheck,
 } from "lucide-react"
 
 type PageProps = {
@@ -30,19 +32,31 @@ type Level = {
   id: string
   name: string
   trackType: "QURAN" | "KITAB"
+  levelOrder: number
   description: string | null
+}
+
+type Schedule = {
+  id: string
+  dayOfWeek: string
+  startTime: string
+  endTime: string
+  mode: "ONLINE" | "IN_PERSON" | "BOTH"
+  location: string | null
 }
 
 type StudentLevel = {
   id: string
   trackType: "QURAN" | "KITAB"
   level: Level
+  schedule: Schedule | null
 }
 
 type RequestedLevel = {
   id: string
   trackType: "QURAN" | "KITAB"
   level: Level
+  schedule: Schedule | null
 }
 
 type Attendance = {
@@ -65,21 +79,48 @@ type Note = {
   createdAt: Date
 }
 
+type Sponsor = {
+  id: string
+  name: string
+  type: "INDIVIDUAL" | "ORGANIZATION" | "FOUNDATION" | "FAMILY" | "OTHER"
+  status: "ACTIVE" | "INACTIVE"
+}
+
 type Student = {
   id: string
   fullName: string
   email: string
   phone: string
+  age: number | null
+  gender: string | null
+  telegramUsername: string | null
+  learningMode: "ONLINE" | "IN_PERSON" | "BOTH" | null
   address: string | null
   isSponsored: boolean
+  sponsor: Sponsor | null
   emergencyContactName: string | null
   emergencyContactPhone: string | null
+  status: "PENDING" | "ACTIVE" | "REJECTED"
+  role: "ADMIN" | "TEACHER" | "STUDENT"
+  approvedAt: Date | null
   createdAt: Date
+  updatedAt: Date
   studentLevels: StudentLevel[]
   requestedLevels: RequestedLevel[]
   attendance: Attendance[]
   lessons: Lesson[]
   notes: Note[]
+}
+
+function formatDate(value: Date | null | undefined) {
+  if (!value) return "Not set"
+  return new Date(value).toLocaleDateString()
+}
+
+function formatTime(schedule: Schedule | null) {
+  if (!schedule) return "Not assigned"
+  const location = schedule.location ? ` • ${schedule.location}` : ""
+  return `${schedule.dayOfWeek} • ${schedule.startTime} → ${schedule.endTime} • ${schedule.mode}${location}`
 }
 
 export default async function StudentDetailPage({ params }: PageProps) {
@@ -88,14 +129,17 @@ export default async function StudentDetailPage({ params }: PageProps) {
   const student = (await prisma.user.findUnique({
     where: { id },
     include: {
+      sponsor: true,
       studentLevels: {
         include: {
           level: true,
+          schedule: true,
         },
       },
       requestedLevels: {
         include: {
           level: true,
+          schedule: true,
         },
       },
       attendance: {
@@ -131,6 +175,14 @@ export default async function StudentDetailPage({ params }: PageProps) {
     (sl: StudentLevel) => sl.trackType === "KITAB"
   )
 
+  const quranRequested = student.requestedLevels.find(
+    (rl: RequestedLevel) => rl.trackType === "QURAN"
+  )
+
+  const kitabRequested = student.requestedLevels.find(
+    (rl: RequestedLevel) => rl.trackType === "KITAB"
+  )
+
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex items-center justify-between gap-4">
@@ -154,7 +206,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
               <div>
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <div className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold uppercase tracking-wide">
-                    Active Student
+                    {student.status}
                   </div>
 
                   {student.isSponsored ? (
@@ -166,6 +218,10 @@ export default async function StudentDetailPage({ params }: PageProps) {
                       Self Sponsored
                     </div>
                   )}
+
+                  <div className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
+                    {student.role}
+                  </div>
                 </div>
 
                 <h1 className="text-3xl font-black sm:text-4xl">
@@ -190,9 +246,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
                   <div className="flex items-center gap-2 text-emerald-50">
                     <CalendarDays className="h-4 w-4" />
-                    <span>
-                      Joined {new Date(student.createdAt).toLocaleDateString()}
-                    </span>
+                    <span>Joined {formatDate(student.createdAt)}</span>
                   </div>
                 </div>
               </div>
@@ -223,13 +277,66 @@ export default async function StudentDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        <div className="grid gap-5 p-6 md:grid-cols-2">
+        <div className="grid gap-5 p-6 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-3xl border border-slate-200 p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
+                <BadgeCheck className="h-6 w-6 text-emerald-700" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Personal Info</p>
+                <h3 className="text-lg font-black text-slate-900">Age & Gender</h3>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm text-slate-700">
+              <p>
+                <span className="font-semibold text-slate-900">Age:</span>{" "}
+                {student.age ?? "Not provided"}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-900">Gender:</span>{" "}
+                {student.gender || "Not provided"}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-900">Telegram:</span>{" "}
+                {student.telegramUsername || "Not provided"}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
+                <ClipboardCheck className="h-6 w-6 text-emerald-700" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Learning Setup</p>
+                <h3 className="text-lg font-black text-slate-900">Mode</h3>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm text-slate-700">
+              <p>
+                <span className="font-semibold text-slate-900">Mode:</span>{" "}
+                {student.learningMode || "Not provided"}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-900">Status:</span>{" "}
+                {student.status}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-900">Approved:</span>{" "}
+                {formatDate(student.approvedAt)}
+              </p>
+            </div>
+          </div>
+
           <div className="rounded-3xl border border-slate-200 p-5">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
                 <BookOpen className="h-6 w-6 text-emerald-700" />
               </div>
-
               <div>
                 <p className="text-sm text-slate-500">Quran Track</p>
                 <h3 className="text-lg font-black text-slate-900">
@@ -239,7 +346,13 @@ export default async function StudentDetailPage({ params }: PageProps) {
             </div>
 
             <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
-              Current Quran memorization and learning track.
+              <p className="font-semibold text-slate-900">
+                {quranRequested?.schedule
+                  ? formatTime(quranRequested.schedule)
+                  : quranLevel?.schedule
+                    ? formatTime(quranLevel.schedule)
+                    : "No schedule selected"}
+              </p>
             </div>
           </div>
 
@@ -248,7 +361,6 @@ export default async function StudentDetailPage({ params }: PageProps) {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
                 <ScrollText className="h-6 w-6 text-emerald-700" />
               </div>
-
               <div>
                 <p className="text-sm text-slate-500">Kitab Track</p>
                 <h3 className="text-lg font-black text-slate-900">
@@ -258,7 +370,13 @@ export default async function StudentDetailPage({ params }: PageProps) {
             </div>
 
             <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
-              Current Islamic studies and kitab learning track.
+              <p className="font-semibold text-slate-900">
+                {kitabRequested?.schedule
+                  ? formatTime(kitabRequested.schedule)
+                  : kitabLevel?.schedule
+                    ? formatTime(kitabLevel.schedule)
+                    : "No schedule selected"}
+              </p>
             </div>
           </div>
         </div>
@@ -271,12 +389,13 @@ export default async function StudentDetailPage({ params }: PageProps) {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
                 <ClipboardCheck className="h-6 w-6 text-emerald-700" />
               </div>
-
               <div>
                 <h2 className="text-xl font-black text-slate-900">
                   Attendance History
                 </h2>
-                <p className="text-sm text-slate-500">Recent attendance records</p>
+                <p className="text-sm text-slate-500">
+                  Recent attendance records
+                </p>
               </div>
             </div>
 
@@ -287,7 +406,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 </div>
               )}
 
-              {student.attendance.map((attendance: Attendance) => (
+              {student.attendance.map((attendance) => (
                 <div
                   key={attendance.id}
                   className="flex items-center justify-between rounded-2xl border border-slate-200 p-4"
@@ -314,7 +433,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
                         {attendance.status}
                       </p>
                       <p className="text-sm text-slate-500">
-                        {new Date(attendance.date).toLocaleDateString()}
+                        {formatDate(attendance.date)}
                       </p>
                     </div>
                   </div>
@@ -336,14 +455,59 @@ export default async function StudentDetailPage({ params }: PageProps) {
           <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
-                <NotebookPen className="h-6 w-6 text-emerald-700" />
+                <CalendarDays className="h-6 w-6 text-emerald-700" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900">
+                  Current / Requested Schedules
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Level timing and attendance setup
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Quran Schedule
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  {quranRequested?.schedule
+                    ? formatTime(quranRequested.schedule)
+                    : quranLevel?.schedule
+                      ? formatTime(quranLevel.schedule)
+                      : "No schedule selected"}
+                </p>
               </div>
 
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Kitab Schedule
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  {kitabRequested?.schedule
+                    ? formatTime(kitabRequested.schedule)
+                    : kitabLevel?.schedule
+                      ? formatTime(kitabLevel.schedule)
+                      : "No schedule selected"}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
+                <Clock3 className="h-6 w-6 text-emerald-700" />
+              </div>
               <div>
                 <h2 className="text-xl font-black text-slate-900">
                   Recent Lessons
                 </h2>
-                <p className="text-sm text-slate-500">Latest lesson records</p>
+                <p className="text-sm text-slate-500">
+                  Latest lesson records
+                </p>
               </div>
             </div>
 
@@ -354,7 +518,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 </div>
               )}
 
-              {student.lessons.map((lesson: Lesson) => (
+              {student.lessons.map((lesson) => (
                 <div key={lesson.id} className="rounded-2xl border border-slate-200 p-5">
                   <div className="mb-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
@@ -366,7 +530,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <Clock3 className="h-4 w-4" />
-                      {new Date(lesson.date).toLocaleDateString()}
+                      {formatDate(lesson.date)}
                     </div>
                   </div>
 
@@ -389,7 +553,6 @@ export default async function StudentDetailPage({ params }: PageProps) {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
                 <ShieldCheck className="h-6 w-6 text-emerald-700" />
               </div>
-
               <div>
                 <h2 className="text-xl font-black text-slate-900">
                   Emergency Contact
@@ -414,6 +577,15 @@ export default async function StudentDetailPage({ params }: PageProps) {
                   {student.emergencyContactPhone || "Not provided"}
                 </p>
               </div>
+
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="mb-2 text-sm text-slate-500">Sponsor</p>
+                <p className="font-bold text-slate-900">
+                  {student.isSponsored
+                    ? student.sponsor?.name || "Sponsored"
+                    : "Self Sponsored"}
+                </p>
+              </div>
             </div>
           </section>
 
@@ -422,12 +594,13 @@ export default async function StudentDetailPage({ params }: PageProps) {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100">
                 <Sparkles className="h-6 w-6 text-emerald-700" />
               </div>
-
               <div>
                 <h2 className="text-xl font-black text-slate-900">
                   Requested Levels
                 </h2>
-                <p className="text-sm text-slate-500">Registration preferences</p>
+                <p className="text-sm text-slate-500">
+                  Registration preferences
+                </p>
               </div>
             </div>
 
@@ -438,26 +611,26 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 </div>
               )}
 
-              {student.requestedLevels.map((rl: RequestedLevel) => (
+              {student.requestedLevels.map((rl) => (
                 <div
                   key={rl.id}
-                  className="flex items-center justify-between rounded-2xl border border-slate-200 p-4"
+                  className="rounded-2xl border border-slate-200 p-4"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100">
-                      <User className="h-5 w-5 text-emerald-700" />
-                    </div>
-
+                  <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-bold text-slate-900">
                         {rl.level?.name}
                       </p>
                       <p className="text-sm text-slate-500">{rl.trackType}</p>
                     </div>
+
+                    <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                      Requested
+                    </div>
                   </div>
 
-                  <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                    Requested
+                  <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                    {rl.schedule ? formatTime(rl.schedule) : "No schedule selected"}
                   </div>
                 </div>
               ))}

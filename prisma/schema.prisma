@@ -6,21 +6,41 @@ datasource db {
   provider = "postgresql"
 }
 
+model Sponsor {
+  id        String        @id @default(uuid())
+  name      String
+  type      SponsorType
+  phone     String?
+  email     String?
+  notes     String?
+  status    SponsorStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  students  User[]
+}
+
 model User {
-  id                    String   @id @default(uuid())
-  authUserId            String?  @unique
+  id                    String       @id @default(uuid())
+  authUserId            String?      @unique
   fullName              String
-  email                 String   @unique
-  phone                 String   @unique
-  role                  Role     @default(STUDENT)
-  status                Status   @default(PENDING)
-  isSponsored           Boolean   @default(false)
+  email                 String       @unique
+  phone                 String       @unique
+  age                   Int?
+  gender                Gender?
+  telegramUsername      String?
+  learningMode          LearningMode?
+  role                  Role         @default(STUDENT)
+  status                Status       @default(PENDING)
+  isSponsored           Boolean      @default(false)
+  sponsorId             String?
+  sponsor               Sponsor?     @relation(fields: [sponsorId], references: [id])
   emergencyContactName  String?
   emergencyContactPhone String?
   address               String?
   approvedAt            DateTime?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
 
   requestedLevels RequestedLevel[]
   studentLevels   StudentLevel[]
@@ -30,48 +50,59 @@ model User {
 }
 
 model Level {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   name        String
   trackType   TrackType
   levelOrder  Int
   description String?
 
+  schedules   LevelSchedule[]
+
   requestedLevels RequestedLevel[]
   studentLevels   StudentLevel[]
+}
 
-  @@unique([trackType, levelOrder]) // prevents duplicate levels
+model LevelSchedule {
+  id          String       @id @default(uuid())
+  levelId     String
+  level       Level        @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  dayOfWeek   DayOfWeek
+  startTime   String
+  endTime     String
+  mode        LearningMode
+  location    String?
+
+  requestedLevels RequestedLevel[]
+  studentLevels   StudentLevel[]
 }
 
 model RequestedLevel {
-  id        String    @id @default(uuid())
+  id          String       @id @default(uuid())
+  studentId   String
+  student     User         @relation(fields: [studentId], references: [id])
 
-  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId String
+  levelId     String
+  level       Level        @relation(fields: [levelId], references: [id])
 
-  level     Level     @relation(fields: [levelId], references: [id])
-  levelId   String
+  scheduleId  String?
+  schedule    LevelSchedule? @relation(fields: [scheduleId], references: [id])
 
-  trackType TrackType
-
-  createdAt DateTime @default(now())
-
-  @@unique([studentId, trackType]) // one request per track
+  trackType   TrackType
 }
 
 model StudentLevel {
-  id        String    @id @default(uuid())
+  id          String       @id @default(uuid())
+  studentId   String
+  student     User         @relation(fields: [studentId], references: [id])
 
-  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId String
+  levelId     String
+  level       Level        @relation(fields: [levelId], references: [id])
 
-  level     Level     @relation(fields: [levelId], references: [id])
-  levelId   String
+  scheduleId  String?
+  schedule    LevelSchedule? @relation(fields: [scheduleId], references: [id])
 
-  trackType TrackType
-
-  assignedAt DateTime @default(now())
-
-  @@unique([studentId, trackType]) // only one active level per track
+  trackType   TrackType
 }
 
 model Lesson {
@@ -149,4 +180,40 @@ enum TrackType {
 enum AttendanceStatus {
   PRESENT
   ABSENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum LearningMode {
+  ONLINE
+  IN_PERSON
+  BOTH
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum SponsorType {
+  INDIVIDUAL
+  ORGANIZATION
+  FOUNDATION
+  FAMILY
+  OTHER
+}
+
+enum SponsorStatus {
+  ACTIVE
+  INACTIVE
 }

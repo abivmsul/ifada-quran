@@ -13,9 +13,24 @@ import {
   Search,
   ScrollText,
   Sparkles,
-  User,
   Users,
+  X,
 } from "lucide-react"
+
+type Session = {
+  id: string
+  dayOfWeek: string
+  startTime: string
+  endTime: string
+}
+
+type ScheduleGroup = {
+  id: string
+  label: string
+  mode?: "ONLINE" | "IN_PERSON" | "BOTH"
+  location?: string | null
+  sessions?: Session[]
+}
 
 type LevelRef = {
   id: string
@@ -27,11 +42,19 @@ type StudentLevel = {
   id: string
   trackType: "QURAN" | "KITAB"
   level: LevelRef
+  schedule?: ScheduleGroup | null
 }
 
 type Sponsor = {
   id: string
   name: string
+}
+
+type RequestedLevel = {
+  id: string
+  trackType: "QURAN" | "KITAB"
+  level: LevelRef
+  schedule?: ScheduleGroup | null
 }
 
 type Student = {
@@ -47,14 +70,197 @@ type Student = {
   sponsor?: Sponsor | null
   emergencyContactName?: string | null
   emergencyContactPhone?: string | null
-  createdAt: string
-  studentLevels: StudentLevel[]
+  createdAt?: string
+  studentLevels?: StudentLevel[]
+  requestedLevels?: RequestedLevel[]
+}
+
+function formatSessions(schedule?: ScheduleGroup | null) {
+  if (!schedule?.sessions?.length) return "No sessions"
+  return schedule.sessions
+    .map((s) => `${s.dayOfWeek} • ${s.startTime} → ${s.endTime}`)
+    .join(" | ")
+}
+
+function OverviewModal({
+  student,
+  onClose,
+}: {
+  student: Student
+  onClose: () => void
+}) {
+  const quranLevel = student.studentLevels?.find((sl) => sl.trackType === "QURAN")
+  const kitabLevel = student.studentLevels?.find((sl) => sl.trackType === "KITAB")
+
+  const quranRequested = student.requestedLevels?.find(
+    (rl) => rl.trackType === "QURAN"
+  )
+  const kitabRequested = student.requestedLevels?.find(
+    (rl) => rl.trackType === "KITAB"
+  )
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <p className="text-sm font-medium text-emerald-700">Student Overview</p>
+            <h2 className="text-2xl font-black text-slate-900">
+              {student.fullName}
+            </h2>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="rounded-2xl p-2 text-slate-500 transition hover:bg-slate-100"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="grid gap-6 p-6 lg:grid-cols-2">
+          <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 text-lg font-black text-slate-900">
+              Basic Information
+            </h3>
+
+            <div className="space-y-3 text-sm text-slate-700">
+              <p><span className="font-semibold">Email:</span> {student.email}</p>
+              <p><span className="font-semibold">Phone:</span> {student.phone}</p>
+              <p><span className="font-semibold">Age:</span> {student.age ?? "Not provided"}</p>
+              <p><span className="font-semibold">Gender:</span> {student.gender || "Not provided"}</p>
+              <p><span className="font-semibold">Telegram:</span> {"Not provided"}</p>
+              <p><span className="font-semibold">Address:</span> {student.address || "Not provided"}</p>
+              <p><span className="font-semibold">Learning Mode:</span> {student.learningMode || "Not provided"}</p>
+              <p><span className="font-semibold">Joined:</span> {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : "Not provided"}</p>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 text-lg font-black text-slate-900">
+              Sponsorship & Emergency
+            </h3>
+
+            <div className="space-y-3 text-sm text-slate-700">
+              <p>
+                <span className="font-semibold">Sponsored:</span>{" "}
+                {student.isSponsored ? "Yes" : "No"}
+              </p>
+              <p>
+                <span className="font-semibold">Sponsor:</span>{" "}
+                {student.sponsor?.name || "Not provided"}
+              </p>
+              <p>
+                <span className="font-semibold">Emergency Contact:</span>{" "}
+                {student.emergencyContactName || "Not provided"}
+              </p>
+              <p>
+                <span className="font-semibold">Emergency Phone:</span>{" "}
+                {student.emergencyContactPhone || "Not provided"}
+              </p>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm lg:col-span-2">
+            <h3 className="mb-4 text-lg font-black text-slate-900">
+              Current Levels
+            </h3>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Quran
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  {quranLevel?.level?.name || "Not assigned"}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {quranLevel?.schedule?.label || "No schedule selected"}
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  {formatSessions(quranLevel?.schedule)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Kitab
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  {kitabLevel?.level?.name || "Not assigned"}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {kitabLevel?.schedule?.label || "No schedule selected"}
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  {formatSessions(kitabLevel?.schedule)}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm lg:col-span-2">
+            <h3 className="mb-4 text-lg font-black text-slate-900">
+              Requested Levels
+            </h3>
+
+            <div className="space-y-4">
+              {(student.requestedLevels?.length ?? 0) === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">
+                  No requested levels found.
+                </div>
+              ) : (
+                student.requestedLevels!.map((rl) => (
+                  <div
+                    key={rl.id}
+                    className="rounded-2xl border border-slate-200 p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-slate-900">
+                          {rl.level?.name}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {rl.trackType}
+                        </p>
+                      </div>
+
+                      <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                        Requested
+                      </div>
+                    </div>
+
+                    <div className="mt-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                      <p className="font-semibold text-slate-900">
+                        {rl.schedule?.label || "No schedule selected"}
+                      </p>
+                      <p className="mt-1 text-slate-600">
+                        {formatSessions(rl.schedule)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+
+        <div className="border-t border-slate-200 px-6 py-5">
+          <button
+            onClick={onClose}
+            className="rounded-2xl bg-emerald-700 px-5 py-3 font-bold text-white transition hover:bg-emerald-800"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function ActiveStudentsPage() {
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
-
   const [search, setSearch] = useState("")
   const [sponsored, setSponsored] = useState("")
   const [trackType, setTrackType] = useState("")
@@ -62,6 +268,7 @@ export default function ActiveStudentsPage() {
   const [learningMode, setLearningMode] = useState("")
   const [quranLevel, setQuranLevel] = useState("")
   const [kitabLevel, setKitabLevel] = useState("")
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
 
   async function loadStudents() {
     setLoading(true)
@@ -76,14 +283,15 @@ export default function ActiveStudentsPage() {
     if (kitabLevel) params.set("kitabLevel", kitabLevel)
 
     const res = await fetch(`/api/admin/students?${params.toString()}`)
-    const data = await res.json()
+    const data = await res.json().catch(() => [])
 
-    setStudents(data)
+    setStudents(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
   useEffect(() => {
     loadStudents()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, sponsored, trackType, gender, learningMode, quranLevel, kitabLevel])
 
   const summary = useMemo(() => {
@@ -91,10 +299,10 @@ export default function ActiveStudentsPage() {
       active: students.length,
       sponsored: students.filter((s) => s.isSponsored).length,
       quran: students.filter((s) =>
-        s.studentLevels.some((sl) => sl.trackType === "QURAN")
+        s.studentLevels?.some((sl) => sl.trackType === "QURAN")
       ).length,
       kitab: students.filter((s) =>
-        s.studentLevels.some((sl) => sl.trackType === "KITAB")
+        s.studentLevels?.some((sl) => sl.trackType === "KITAB")
       ).length,
     }
   }, [students])
@@ -103,7 +311,7 @@ export default function ActiveStudentsPage() {
     const items = new Map<string, string>()
     students.forEach((student) => {
       student.studentLevels
-        .filter((sl) => sl.trackType === "QURAN")
+        ?.filter((sl) => sl.trackType === "QURAN")
         .forEach((sl) => items.set(sl.level.id, sl.level.name))
     })
     return Array.from(items.entries()).map(([id, name]) => ({ id, name }))
@@ -113,7 +321,7 @@ export default function ActiveStudentsPage() {
     const items = new Map<string, string>()
     students.forEach((student) => {
       student.studentLevels
-        .filter((sl) => sl.trackType === "KITAB")
+        ?.filter((sl) => sl.trackType === "KITAB")
         .forEach((sl) => items.set(sl.level.id, sl.level.name))
     })
     return Array.from(items.entries()).map(([id, name]) => ({ id, name }))
@@ -129,7 +337,7 @@ export default function ActiveStudentsPage() {
               Active Students
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              Manage approved students with compact filters and a scalable table.
+              Manage active students from a compact table and open their full overview in a modal.
             </p>
           </div>
 
@@ -284,217 +492,123 @@ export default function ActiveStudentsPage() {
 
       <section className="rounded-3xl border border-emerald-100 bg-white shadow-sm">
         {loading ? (
-          <div className="p-10 text-center text-slate-500">Loading active students...</div>
+          <div className="p-10 text-center text-slate-500">
+            Loading active students...
+          </div>
         ) : students.length === 0 ? (
           <div className="p-12 text-center">
             <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
               <Users className="h-10 w-10 text-emerald-700" />
             </div>
-            <h2 className="text-2xl font-black text-slate-900">No Active Students</h2>
+            <h2 className="text-2xl font-black text-slate-900">
+              No Active Students
+            </h2>
             <p className="mt-2 text-slate-600">
               No students match the current filters.
             </p>
           </div>
         ) : (
-          <>
-            <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full min-w-[1450px]">
+          <div className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
                 <thead className="border-b border-slate-200 bg-slate-50">
                   <tr className="text-left">
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600">#</th>
                     <th className="px-6 py-4 text-sm font-bold text-slate-600">Student</th>
                     <th className="px-6 py-4 text-sm font-bold text-slate-600">Contact</th>
-                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Details</th>
-                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Current Levels</th>
-                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Sponsor</th>
-                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Emergency</th>
-                    <th className="px-6 py-4 text-sm font-bold text-slate-600 text-right">Actions</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600">Status</th>
+                    <th className="px-6 py-4 text-sm font-bold text-slate-600 text-right">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {students.map((student) => {
-                    const quranLevel = student.studentLevels.find((sl) => sl.trackType === "QURAN")
-                    const kitabLevel = student.studentLevels.find((sl) => sl.trackType === "KITAB")
+                  {students.map((student, index) => (
+                    <tr
+                      key={student.id}
+                      className="border-b border-slate-100 transition hover:bg-slate-50"
+                    >
+                      <td className="px-6 py-5 font-bold text-slate-500">
+                        {index + 1}
+                      </td>
 
-                    return (
-                      <tr key={student.id} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="px-6 py-5">
-                          <div>
-                            <h3 className="font-bold text-slate-900">{student.fullName}</h3>
-                            <p className="text-sm text-slate-500">
-                              {student.gender || "-"} • Age {student.age ?? "-"}
-                            </p>
-                            <p className="text-xs text-slate-400">
-                              {student.learningMode || "Not set"}
-                            </p>
-                          </div>
-                        </td>
+                      <td className="px-6 py-5">
+                        <button
+                          onClick={() => setSelectedStudent(student)}
+                          className="text-left font-bold text-slate-900 transition hover:text-emerald-700"
+                        >
+                          {student.fullName}
+                        </button>
+                        <p className="text-sm text-slate-500">
+                          {student.gender || "Not provided"} • Age{" "}
+                          {student.age ?? "-"}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {student.learningMode || "Not provided"}
+                        </p>
+                      </td>
 
-                        <td className="px-6 py-5">
-                          <div className="space-y-1">
-                            <p className="text-sm text-slate-900">{student.phone}</p>
-                            <p className="text-sm text-slate-500">{student.email}</p>
-                            <p className="text-xs text-slate-400">{student.address || "No address"}</p>
-                          </div>
-                        </td>
+                      <td className="px-6 py-5">
+                        <div className="space-y-1 text-sm text-slate-700">
+                          <p>{student.phone}</p>
+                          <p className="text-slate-500">{student.email}</p>
+                          <p className="text-xs text-slate-400">
+                            {student.address || "No address"}
+                          </p>
+                        </div>
+                      </td>
 
-                        <td className="px-6 py-5">
-                          <div className="space-y-2 text-sm text-slate-700">
-                            <p>
-                              <span className="font-semibold">Age:</span> {student.age ?? "-"}
-                            </p>
-                            <p>
-                              <span className="font-semibold">Mode:</span> {student.learningMode || "-"}
-                            </p>
-                          </div>
-                        </td>
-
-                        <td className="px-6 py-5">
-                          <div className="space-y-2">
-                            <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 inline-flex">
-                              Quran: {quranLevel?.level.name || "Not assigned"}
-                            </div>
-                            <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 inline-flex">
-                              Kitab: {kitabLevel?.level.name || "Not assigned"}
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-6 py-5">
+                      <td className="px-6 py-5">
+                        <div className="space-y-2">
+                          <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                            Active
+                          </span>
                           {student.isSponsored ? (
-                            <div>
-                              <p className="font-semibold text-slate-900">
-                                {student.sponsor?.name || "Sponsored"}
-                              </p>
-                              <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-bold text-amber-700">
-                                Sponsored
-                              </span>
-                            </div>
+                            <span className="ml-2 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+                              Sponsored
+                            </span>
                           ) : (
-                            <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                            <span className="ml-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
                               Self Sponsored
                             </span>
                           )}
-                        </td>
+                        </div>
+                      </td>
 
-                        <td className="px-6 py-5">
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold text-slate-900">
-                              {student.emergencyContactName || "-"}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              {student.emergencyContactPhone || "-"}
-                            </p>
-                          </div>
-                        </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setSelectedStudent(student)}
+                            className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            View
+                          </button>
 
-                        <td className="px-6 py-5">
-                          <div className="flex items-center justify-end gap-2">
-                            <Link
-                              href={`/admin/students/${student.id}`}
-                              className="h-10 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-800 inline-flex items-center gap-2"
-                            >
-                              <Eye className="h-4 w-4" />
-                              View
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
+                          <Link
+                            href={`/admin/students/${student.id}`}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-800"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Details
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-
-            <div className="grid gap-4 p-4 lg:hidden">
-              {students.map((student) => {
-                const quranLevel = student.studentLevels.find((sl) => sl.trackType === "QURAN")
-                const kitabLevel = student.studentLevels.find((sl) => sl.trackType === "KITAB")
-
-                return (
-                  <div
-                    key={student.id}
-                    className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-lg font-black text-slate-900">
-                          {student.fullName}
-                        </h3>
-                        <p className="text-sm text-slate-500">
-                          {student.gender || "-"} • Age {student.age ?? "-"}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {student.learningMode || "Not set"}
-                        </p>
-                      </div>
-
-                      {student.isSponsored ? (
-                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-                          Sponsored
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                          Self Sponsored
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-slate-200 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                          Contact
-                        </p>
-                        <p className="mt-2 text-sm font-semibold text-slate-900">
-                          {student.phone}
-                        </p>
-                        <p className="text-sm text-slate-500">{student.email}</p>
-                      </div>
-
-                      <div className="rounded-2xl border border-slate-200 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                          Emergency
-                        </p>
-                        <p className="mt-2 text-sm font-semibold text-slate-900">
-                          {student.emergencyContactName || "-"}
-                        </p>
-                        <p className="text-sm text-slate-500">
-                          {student.emergencyContactPhone || "-"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-2xl border border-slate-200 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                        Current Levels
-                      </p>
-                      <div className="mt-2 space-y-2 text-sm text-slate-700">
-                        <p>
-                          <span className="font-semibold">Quran:</span>{" "}
-                          {quranLevel?.level.name || "Not assigned"}
-                        </p>
-                        <p>
-                          <span className="font-semibold">Kitab:</span>{" "}
-                          {kitabLevel?.level.name || "Not assigned"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex gap-2">
-                      <Link
-                        href={`/admin/students/${student.id}`}
-                        className="flex-1 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 inline-flex items-center justify-center gap-2"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Link>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </>
+          </div>
         )}
       </section>
+
+      {selectedStudent && (
+        <OverviewModal
+          student={selectedStudent}
+          onClose={() => setSelectedStudent(null)}
+        />
+      )}
     </main>
   )
 }

@@ -20,45 +20,7 @@ type SessionInput = {
   endTime: string
 }
 
-export async function GET(req: NextRequest, { params }: Params) {
-  try {
-    const { id } = await params
-    const mode = req.nextUrl.searchParams.get("mode") as
-      | "ONLINE"
-      | "IN_PERSON"
-      | "BOTH"
-      | null
-
-    const schedules = await prisma.levelSchedule.findMany({
-      where: {
-        levelId: id,
-        ...(mode && mode !== "BOTH"
-          ? {
-              OR: [{ mode }, { mode: "BOTH" }],
-            }
-          : {}),
-      },
-      include: {
-        sessions: {
-          orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
-        },
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
-    })
-
-    return NextResponse.json(schedules)
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json(
-      { error: "Failed to load schedules" },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(req: NextRequest, { params }: Params) {
+export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params
     const body = await req.json()
@@ -80,13 +42,14 @@ export async function POST(req: NextRequest, { params }: Params) {
       )
     }
 
-    const schedule = await prisma.levelSchedule.create({
+    const schedule = await prisma.levelSchedule.update({
+      where: { id },
       data: {
-        levelId: id,
         label,
         mode,
         location: location || null,
         sessions: {
+          deleteMany: {},
           create: sessions.map((session: SessionInput) => ({
             dayOfWeek: session.dayOfWeek,
             startTime: session.startTime,
@@ -105,7 +68,25 @@ export async function POST(req: NextRequest, { params }: Params) {
   } catch (error) {
     console.error(error)
     return NextResponse.json(
-      { error: "Failed to create schedule group" },
+      { error: "Failed to update schedule group" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(_: NextRequest, { params }: Params) {
+  try {
+    const { id } = await params
+
+    await prisma.levelSchedule.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json(
+      { error: "Failed to delete schedule group" },
       { status: 500 }
     )
   }

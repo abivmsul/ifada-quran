@@ -34,13 +34,19 @@ type Sponsor = {
   status: "ACTIVE" | "INACTIVE"
 }
 
-type Schedule = {
+type ScheduleSession = {
   id: string
   dayOfWeek: string
   startTime: string
   endTime: string
+}
+
+type ScheduleGroup = {
+  id: string
+  label: string
   mode: "ONLINE" | "IN_PERSON" | "BOTH"
   location: string | null
+  sessions: ScheduleSession[]
 }
 
 type LearningMode = "ONLINE" | "IN_PERSON" | "BOTH"
@@ -72,7 +78,7 @@ const learningModeOptions: Array<{ value: LearningMode; label: string }> = [
   { value: "BOTH", label: "Both" },
 ]
 
-function sortSchedules(items: Schedule[]) {
+function sortSessions(items: ScheduleSession[]) {
   return [...items].sort((a, b) => {
     const dayDiff = dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek)
     if (dayDiff !== 0) return dayDiff
@@ -80,9 +86,8 @@ function sortSchedules(items: Schedule[]) {
   })
 }
 
-function formatSchedule(schedule: Schedule) {
-  const location = schedule.location ? ` • ${schedule.location}` : ""
-  return `${schedule.dayOfWeek} • ${schedule.startTime} → ${schedule.endTime} • ${schedule.mode}${location}`
+function formatGroup(group: ScheduleGroup) {
+  return `${group.label} • ${group.sessions.length} sessions`
 }
 
 function TrackBlock({
@@ -105,12 +110,19 @@ function TrackBlock({
   levelValue: string
   scheduleValue: string
   levels: Level[]
-  schedules: Schedule[]
+  schedules: ScheduleGroup[]
   learningMode: LearningMode
   onLevelChange: (value: string) => void
   onScheduleChange: (value: string) => void
 }) {
-  const sortedSchedules = useMemo(() => sortSchedules(schedules), [schedules])
+  const sortedSchedules = useMemo(
+    () =>
+      schedules.map((group) => ({
+        ...group,
+        sessions: sortSessions(group.sessions),
+      })),
+    [schedules]
+  )
 
   return (
     <div className="rounded-2xl border border-slate-200 p-5">
@@ -143,55 +155,58 @@ function TrackBlock({
         {levelValue && (
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Schedule
+              Schedule Group
             </label>
+
             <select
               value={scheduleValue}
               onChange={(e) => onScheduleChange(e.target.value)}
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none"
             >
               <option value="">No schedule selected</option>
-              {sortedSchedules.map((schedule) => (
-                <option key={schedule.id} value={schedule.id}>
-                  {formatSchedule(schedule)}
+              {sortedSchedules.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {formatGroup(group)}
                 </option>
               ))}
             </select>
 
             <p className="mt-3 text-sm text-slate-500">
-              Showing schedules matched to the selected level and learning mode:{" "}
-              {learningMode}.
+              Showing schedule groups matched to the selected level and learning mode: {learningMode}.
             </p>
 
             {sortedSchedules.length === 0 && (
               <div className="mt-3 rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-                No schedules found for this level yet.
+                No schedule groups found for this level yet.
               </div>
             )}
 
             {sortedSchedules.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {sortedSchedules.map((schedule) => (
+              <div className="mt-3 space-y-3">
+                {sortedSchedules.map((group) => (
                   <div
-                    key={schedule.id}
+                    key={group.id}
                     className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-slate-900">
-                        {schedule.dayOfWeek}
-                      </span>
-                      <span>
-                        {schedule.startTime} → {schedule.endTime}
-                      </span>
+                      <span className="font-bold text-slate-900">{group.label}</span>
                       <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">
-                        {schedule.mode}
+                        {group.mode}
                       </span>
+                      {group.location && (
+                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">
+                          {group.location}
+                        </span>
+                      )}
                     </div>
-                    {schedule.location && (
-                      <div className="mt-1 text-xs text-slate-500">
-                        {schedule.location}
-                      </div>
-                    )}
+
+                    <div className="mt-2 space-y-1">
+                      {group.sessions.map((session) => (
+                        <div key={session.id} className="text-xs text-slate-500">
+                          {session.dayOfWeek} • {session.startTime} → {session.endTime}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -208,8 +223,8 @@ export default function StudentRegistrationForm({ mode, submitUrl }: Props) {
 
   const [levels, setLevels] = useState<Level[]>([])
   const [sponsors, setSponsors] = useState<Sponsor[]>([])
-  const [quranSchedules, setQuranSchedules] = useState<Schedule[]>([])
-  const [kitabSchedules, setKitabSchedules] = useState<Schedule[]>([])
+  const [quranSchedules, setQuranSchedules] = useState<ScheduleGroup[]>([])
+  const [kitabSchedules, setKitabSchedules] = useState<ScheduleGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [search, setSearch] = useState("")
@@ -289,7 +304,7 @@ export default function StudentRegistrationForm({ mode, submitUrl }: Props) {
   async function loadSchedules(
     levelId: string,
     learningMode: LearningMode,
-    setSchedules: (schedules: Schedule[]) => void
+    setSchedules: (schedules: ScheduleGroup[]) => void
   ) {
     if (!levelId) {
       setSchedules([])
@@ -417,7 +432,7 @@ export default function StudentRegistrationForm({ mode, submitUrl }: Props) {
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
               {isAdmin
                 ? "Add a new student directly into the system. This creates an active student immediately."
-                : "Fill in your details, choose tracks and schedules if needed, and submit your application for approval."}
+                : "Fill in your details, choose tracks and schedule groups if needed, and submit your application for approval."}
             </p>
           </div>
 
@@ -647,7 +662,7 @@ export default function StudentRegistrationForm({ mode, submitUrl }: Props) {
 
               <TrackBlock
                 title="Quran Track"
-                subtitle="Select the Quran level and a matching schedule."
+                subtitle="Select the Quran level and one schedule group."
                 icon={BookOpen}
                 trackType="QURAN"
                 levelValue={form.quranLevelId}
@@ -672,7 +687,7 @@ export default function StudentRegistrationForm({ mode, submitUrl }: Props) {
 
               <TrackBlock
                 title="Kitab Track"
-                subtitle="Select the Kitab level and a matching schedule."
+                subtitle="Select the Kitab level and one schedule group."
                 icon={ScrollText}
                 trackType="KITAB"
                 levelValue={form.kitabLevelId}
@@ -866,10 +881,10 @@ export default function StudentRegistrationForm({ mode, submitUrl }: Props) {
 
               <div className="rounded-2xl border border-slate-200 p-4">
                 <p className="font-semibold text-slate-900">
-                  Schedules filtered by level
+                  Schedule groups
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Schedule options change automatically based on the selected level and learning mode.
+                  Students choose one schedule group per track. Each group can contain multiple weekly sessions.
                 </p>
               </div>
             </div>

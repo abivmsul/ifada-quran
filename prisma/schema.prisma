@@ -63,19 +63,34 @@ model Level {
 }
 
 model LevelSchedule {
-  id          String       @id @default(uuid())
-  levelId     String
-  level       Level        @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  id        String               @id @default(uuid())
+  label     String
+  levelId   String
+  level     Level                @relation(fields: [levelId], references: [id], onDelete: Cascade)
 
-  dayOfWeek   DayOfWeek
-  startTime   String
-  endTime     String
-  mode        LearningMode
-  location    String?
+  mode      LearningMode
+  location  String?
+
+  sessions  LevelScheduleSession[]
 
   requestedLevels RequestedLevel[]
   studentLevels   StudentLevel[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+
+
+model LevelScheduleSession {
+  id         String        @id @default(uuid())
+  scheduleId String
+  schedule   LevelSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  dayOfWeek  DayOfWeek
+  startTime  String
+  endTime    String
+}
+
 
 // model RequestedLevel {
 //   id          String       @id @default(uuid())
@@ -106,33 +121,32 @@ model LevelSchedule {
 // }
 
 model RequestedLevel {
-  id         String        @id @default(uuid())
-  studentId   String
-  student     User          @relation(fields: [studentId], references: [id])
+  id        String    @id @default(uuid())
+  student   User      @relation(fields: [studentId], references: [id])
+  studentId String
 
-  levelId     String
-  level       Level         @relation(fields: [levelId], references: [id])
+  level     Level     @relation(fields: [levelId], references: [id])
+  levelId   String
 
-  scheduleId  String?
-  schedule    LevelSchedule? @relation(fields: [scheduleId], references: [id])
+  scheduleId String?
+  schedule   LevelSchedule? @relation(fields: [scheduleId], references: [id])
 
-  trackType   TrackType
+  trackType TrackType
 }
 
 model StudentLevel {
-  id         String        @id @default(uuid())
-  studentId   String
-  student     User          @relation(fields: [studentId], references: [id])
+  id        String    @id @default(uuid())
+  student   User      @relation(fields: [studentId], references: [id])
+  studentId String
 
-  levelId     String
-  level       Level         @relation(fields: [levelId], references: [id])
+  level     Level     @relation(fields: [levelId], references: [id])
+  levelId   String
 
-  scheduleId  String?
-  schedule    LevelSchedule? @relation(fields: [scheduleId], references: [id])
+  scheduleId String?
+  schedule   LevelSchedule? @relation(fields: [scheduleId], references: [id])
 
-  trackType   TrackType
+  trackType TrackType
 }
-
 
 model Lesson {
   id          String    @id @default(uuid())
@@ -209,6 +223,7 @@ enum TrackType {
 enum AttendanceStatus {
   PRESENT
   ABSENT
+  PERMISSION
 }
 
 enum Gender {

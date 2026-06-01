@@ -1,5 +1,3 @@
-// src/app/admin/students/[id]/page.tsx
-
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
@@ -27,6 +25,13 @@ type PageProps = {
   }>
 }
 
+type ScheduleSession = {
+  id: string
+  dayOfWeek: string
+  startTime: string
+  endTime: string
+}
+
 type Level = {
   id: string
   name: string
@@ -37,11 +42,10 @@ type Level = {
 
 type Schedule = {
   id: string
-  dayOfWeek: string
-  startTime: string
-  endTime: string
+  label: string
   mode: "ONLINE" | "IN_PERSON" | "BOTH"
   location: string | null
+  sessions: ScheduleSession[]
 }
 
 type StudentLevel = {
@@ -111,15 +115,59 @@ type Student = {
   notes: Note[]
 }
 
+type SessionType = {
+  id: string
+  dayOfWeek: string
+  startTime: string
+  endTime: string
+}
+
+const DAY_ORDER: Record<string, number> = {
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+  SUNDAY: 7,
+}
+
+function sortSessions(
+  sessions: SessionType[]
+): SessionType[] {
+  return [...sessions].sort((a, b) => {
+    const dayDiff =
+      (DAY_ORDER[a.dayOfWeek] || 99) -
+      (DAY_ORDER[b.dayOfWeek] || 99)
+
+    if (dayDiff !== 0) {
+      return dayDiff
+    }
+
+    return a.startTime.localeCompare(
+      b.startTime
+    )
+  })
+}
+
 function formatDate(value: Date | null | undefined) {
   if (!value) return "Not set"
   return new Date(value).toLocaleDateString()
 }
 
-function formatSchedule(schedule: Schedule | null) {
+function formatGroup(schedule: Schedule | null) {
   if (!schedule) return "Not assigned"
+
+  const sessions = schedule.sessions?.length
+    ? schedule.sessions
+        .map(
+          (s) => `${s.dayOfWeek} • ${s.startTime} → ${s.endTime}`
+        )
+        .join(" | ")
+    : "No sessions"
+
   const location = schedule.location ? ` • ${schedule.location}` : ""
-  return `${schedule.dayOfWeek} • ${schedule.startTime} → ${schedule.endTime} • ${schedule.mode}${location}`
+  return `${schedule.label} • ${schedule.mode}${location}\n${sessions}`
 }
 
 export default async function StudentDetailPage({ params }: PageProps) {
@@ -132,13 +180,21 @@ export default async function StudentDetailPage({ params }: PageProps) {
       studentLevels: {
         include: {
           level: true,
-          schedule: true,
+          schedule: {
+            include: {
+              sessions: true,
+            },
+          },
         },
       },
       requestedLevels: {
         include: {
           level: true,
-          schedule: true,
+          schedule: {
+            include: {
+              sessions: true,
+            },
+          },
         },
       },
       attendance: {
@@ -166,18 +222,12 @@ export default async function StudentDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  const quranLevel = student.studentLevels.find(
-    (sl) => sl.trackType === "QURAN"
-  )
-
-  const kitabLevel = student.studentLevels.find(
-    (sl) => sl.trackType === "KITAB"
-  )
+  const quranLevel = student.studentLevels.find((sl) => sl.trackType === "QURAN")
+  const kitabLevel = student.studentLevels.find((sl) => sl.trackType === "KITAB")
 
   const quranRequested = student.requestedLevels.find(
     (rl) => rl.trackType === "QURAN"
   )
-
   const kitabRequested = student.requestedLevels.find(
     (rl) => rl.trackType === "KITAB"
   )
@@ -197,7 +247,6 @@ export default async function StudentDetailPage({ params }: PageProps) {
         </Link>
       </div>
 
-      {/* HERO */}
       <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
         <div className="bg-gradient-to-r from-emerald-700 to-emerald-600 px-6 py-8 text-white">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -280,7 +329,6 @@ export default async function StudentDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* OVERVIEW CARDS */}
         <div className="grid gap-5 p-6 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-3xl border border-slate-200 p-5">
             <div className="mb-4 flex items-center gap-3">
@@ -289,9 +337,7 @@ export default async function StudentDetailPage({ params }: PageProps) {
               </div>
               <div>
                 <p className="text-sm text-slate-500">Personal Info</p>
-                <h3 className="text-lg font-black text-slate-900">
-                  Age & Gender
-                </h3>
+                <h3 className="text-lg font-black text-slate-900">Age & Gender</h3>
               </div>
             </div>
 
@@ -353,9 +399,9 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
             <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
               <p className="font-semibold text-slate-900">
-                {quranLevel?.level
-                  ? `${quranLevel.level.trackType} • Level ${quranLevel.level.levelOrder}`
-                  : "No Quran level assigned"}
+                {quranSchedule
+                  ? `${quranSchedule.label} • ${quranSchedule.mode}`
+                  : "No Quran schedule assigned"}
               </p>
             </div>
           </div>
@@ -375,9 +421,9 @@ export default async function StudentDetailPage({ params }: PageProps) {
 
             <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-slate-700">
               <p className="font-semibold text-slate-900">
-                {kitabLevel?.level
-                  ? `${kitabLevel.level.trackType} • Level ${kitabLevel.level.levelOrder}`
-                  : "No Kitab level assigned"}
+                {kitabSchedule
+                  ? `${kitabSchedule.label} • ${kitabSchedule.mode}`
+                  : "No Kitab schedule assigned"}
               </p>
             </div>
           </div>
@@ -477,9 +523,22 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 <p className="mt-2 text-sm font-semibold text-slate-900">
                   {quranRequested?.level?.name || "Not requested"}
                 </p>
-                <p className="mt-2 text-sm text-slate-600">
-                  {quranSchedule ? formatSchedule(quranSchedule) : "No schedule selected"}
-                </p>
+                <div className="mt-2 space-y-1 text-sm text-slate-600">
+                  {quranSchedule ? (
+                    <>
+                      <p className="font-semibold text-slate-900">
+                        {quranSchedule.label}
+                      </p>
+                      {sortSessions(quranSchedule.sessions || []).map((session) => (
+                        <p key={session.id}>
+                          {session.dayOfWeek} • {session.startTime} → {session.endTime}
+                        </p>
+                      ))}
+                    </>
+                  ) : (
+                    <p>No schedule selected</p>
+                  )}
+                </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 p-4">
@@ -489,9 +548,22 @@ export default async function StudentDetailPage({ params }: PageProps) {
                 <p className="mt-2 text-sm font-semibold text-slate-900">
                   {kitabRequested?.level?.name || "Not requested"}
                 </p>
-                <p className="mt-2 text-sm text-slate-600">
-                  {kitabSchedule ? formatSchedule(kitabSchedule) : "No schedule selected"}
-                </p>
+                <div className="mt-2 space-y-1 text-sm text-slate-600">
+                  {kitabSchedule ? (
+                    <>
+                      <p className="font-semibold text-slate-900">
+                        {kitabSchedule.label}
+                      </p>
+                      {sortSessions(kitabSchedule.sessions || []).map((session) => (
+                        <p key={session.id}>
+                          {session.dayOfWeek} • {session.startTime} → {session.endTime}
+                        </p>
+                      ))}
+                    </>
+                  ) : (
+                    <p>No schedule selected</p>
+                  )}
+                </div>
               </div>
             </div>
           </section>
@@ -633,7 +705,20 @@ export default async function StudentDetailPage({ params }: PageProps) {
                   </div>
 
                   <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
-                    {rl.schedule ? formatSchedule(rl.schedule) : "No schedule selected"}
+                    {rl.schedule ? (
+                      <>
+                        <p className="font-semibold text-slate-900">
+                          {rl.schedule.label}
+                        </p>
+                        {sortSessions(rl.schedule.sessions || []).map((session) => (
+                          <p key={session.id}>
+                            {session.dayOfWeek} • {session.startTime} → {session.endTime}
+                          </p>
+                        ))}
+                      </>
+                    ) : (
+                      "No schedule selected"
+                    )}
                   </div>
                 </div>
               ))}

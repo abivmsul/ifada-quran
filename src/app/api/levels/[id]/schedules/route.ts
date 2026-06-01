@@ -25,14 +25,14 @@ export async function GET(req: NextRequest, { params }: Params) {
             }
           : {}),
       },
-      orderBy: [
-        {
-          dayOfWeek: "asc",
+      include: {
+        sessions: {
+          orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
         },
-        {
-          startTime: "asc",
-        },
-      ],
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
     })
 
     return NextResponse.json(schedules)

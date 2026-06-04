@@ -21,6 +21,7 @@ import {
   X,
   UserPlus,
   HandCoins,
+  BarChart3,
 } from "lucide-react"
 
 export default function AdminLayout({
@@ -123,201 +124,242 @@ export default function AdminLayout({
               Main Navigation
             </div>
 
-            <nav className="space-y-2">
-              <Link
-                href="/admin"
-                onClick={() => setMobileOpen(false)}
-                className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
-                  isActive("/admin") && pathname === "/admin"
-                    ? "bg-emerald-900 text-white shadow-md"
-                    : "text-slate-700 hover:bg-emerald-900 hover:text-white"
-                }`}
-              >
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
-                    isActive("/admin") && pathname === "/admin"
-                      ? "bg-white/10"
-                      : "bg-emerald-50 group-hover:bg-white/10"
-                  }`}
-                >
-                  <LayoutDashboard className="h-5 w-5" />
+         <nav className="space-y-3">
+          {/* DASHBOARD */}
+          <Link
+            href="/admin"
+            onClick={() => setMobileOpen(false)}
+            className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
+              pathname === "/admin"
+                ? "bg-emerald-900 text-white shadow-md"
+                : "text-slate-700 hover:bg-emerald-900 hover:text-white"
+            }`}
+          >
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                pathname === "/admin"
+                  ? "bg-white/10"
+                  : "bg-emerald-50 group-hover:bg-white/10"
+              }`}
+            >
+              <LayoutDashboard className="h-5 w-5" />
+            </div>
+
+            <span className="font-bold">Dashboard</span>
+          </Link>
+
+          {/* STUDENTS */}
+          <div className="rounded-3xl border border-emerald-900/10 bg-slate-50 p-2">
+            <button
+              onClick={() => setStudentsOpen(!studentsOpen)}
+              className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition hover:bg-white"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-900 text-white">
+                  <Users className="h-5 w-5" />
                 </div>
-                <span className="font-bold">Dashboard</span>
-              </Link>
 
-              {/* Students dropdown */}
-              <div className="rounded-3xl border border-emerald-900/10 bg-slate-50 p-2">
-                <button
-                  onClick={() => setStudentsOpen(!studentsOpen)}
-                  className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition hover:bg-white"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-900 text-white">
-                      <Users className="h-5 w-5" />
-                    </div>
-
-                    <div>
-                      <div className="font-bold text-slate-900">Students</div>
-                      <div className="text-xs text-slate-500">
-                        Manage all students
-                      </div>
-                    </div>
+                <div>
+                  <div className="font-bold text-slate-900">
+                    Students
                   </div>
 
-                  {studentsOpen ? (
-                    <ChevronDown className="h-5 w-5 text-slate-500" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-slate-500" />
-                  )}
-                </button>
-
-                {studentsOpen && (
-                  <div className="mt-2 space-y-1 pl-2">
-                    <Link
-                      href="/admin/register-student"
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
-                        pathname === "/admin/register-student"
-                          ? "bg-white text-emerald-900"
-                          : "text-slate-700 hover:bg-white"
-                      }`}
-                    >
-                      <UserPlus className="h-4 w-4 text-emerald-900" />
-                      Register Student
-                    </Link>
-
-                    <Link
-                      href="/admin/students"
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
-                        pathname.startsWith("/admin/students")
-                          ? "bg-white text-emerald-900"
-                          : "text-slate-700 hover:bg-white"
-                      }`}
-                    >
-                      <Users className="h-4 w-4 text-emerald-900" />
-                      Active Students
-                    </Link>
-
-                    <Link
-                      href="/admin/pending"
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
-                        pathname === "/admin/pending"
-                          ? "bg-white text-emerald-900"
-                          : "text-slate-700 hover:bg-white"
-                      }`}
-                    >
-                      <ClipboardCheck className="h-4 w-4 text-amber-600" />
-                      Pending Students
-                    </Link>
+                  <div className="text-xs text-slate-500">
+                    Manage students
                   </div>
-                )}
+                </div>
               </div>
 
+              {studentsOpen ? (
+                <ChevronDown className="h-5 w-5 text-slate-500" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-slate-500" />
+              )}
+            </button>
+
+            {studentsOpen && (
+              <div className="mt-2 space-y-1 pl-2">
+                <Link
+                  href="/admin/register-student"
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
+                    pathname === "/admin/register-student"
+                      ? "bg-white text-emerald-900"
+                      : "text-slate-700 hover:bg-white"
+                  }`}
+                >
+                  <UserPlus className="h-4 w-4 text-emerald-900" />
+                  Register Student
+                </Link>
+
+                <Link
+                  href="/admin/students"
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
+                    pathname.startsWith("/admin/students")
+                      ? "bg-white text-emerald-900"
+                      : "text-slate-700 hover:bg-white"
+                  }`}
+                >
+                  <Users className="h-4 w-4 text-emerald-900" />
+                  Active Students
+                </Link>
+
+                <Link
+                  href="/admin/pending"
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
+                    pathname === "/admin/pending"
+                      ? "bg-white text-emerald-900"
+                      : "text-slate-700 hover:bg-white"
+                  }`}
+                >
+                  <ClipboardCheck className="h-4 w-4 text-amber-600" />
+                  Pending Students
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* ATTENDANCE */}
+          <div className="rounded-3xl border border-emerald-900/10 bg-slate-50 p-2">
+            <div className="flex items-center gap-3 px-3 py-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-900 text-white">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+
+              <div>
+                <div className="font-bold text-slate-900">
+                  Attendance
+                </div>
+
+                <div className="text-xs text-slate-500">
+                  Manage attendance
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1 pl-2">
               <Link
                 href="/admin/attendance"
                 onClick={() => setMobileOpen(false)}
-                className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
-                  pathname.startsWith("/admin/attendance")
-                    ? "bg-emerald-900 text-white shadow-md"
-                    : "text-slate-700 hover:bg-emerald-900 hover:text-white"
+                className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
+                  pathname === "/admin/attendance"
+                    ? "bg-white text-emerald-900"
+                    : "text-slate-700 hover:bg-white"
                 }`}
               >
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
-                    pathname.startsWith("/admin/attendance")
-                      ? "bg-white/10"
-                      : "bg-emerald-50 group-hover:bg-white/10"
-                  }`}
-                >
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-                <span className="font-bold">Attendance</span>
+                <CheckCircle2 className="h-4 w-4 text-emerald-900" />
+                Mark Attendance
               </Link>
 
               <Link
-                href="/admin/lessons"
+                href="/admin/attendance/attendance-summary"
                 onClick={() => setMobileOpen(false)}
-                className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
-                  pathname.startsWith("/admin/lessons")
-                    ? "bg-emerald-900 text-white shadow-md"
-                    : "text-slate-700 hover:bg-emerald-900 hover:text-white"
+                className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition ${
+                  pathname.startsWith("/admin/attendance/attendance-summary")
+                    ? "bg-white text-emerald-900"
+                    : "text-slate-700 hover:bg-white"
                 }`}
               >
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
-                    pathname.startsWith("/admin/lessons")
-                      ? "bg-white/10"
-                      : "bg-emerald-50 group-hover:bg-white/10"
-                  }`}
-                >
-                  <BookOpen className="h-5 w-5" />
-                </div>
-                <span className="font-bold">Lessons</span>
+                <BarChart3 className="h-4 w-4 text-emerald-900" />
+                Attendance Reports
               </Link>
-                  <Link
-                      href="/admin/sponsors"
-                      onClick={() => setMobileOpen(false)}
-                      className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
-                        pathname.startsWith("/admin/sponsors")
-                          ? "bg-emerald-900 text-white shadow-md"
-                          : "text-slate-700 hover:bg-emerald-900 hover:text-white"
-                      }`}
-                    >
-                      <div
-                        className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
-                          pathname.startsWith("/admin/sponsors")
-                            ? "bg-white/10"
-                            : "bg-emerald-50 group-hover:bg-white/10"
-                        }`}
-                      >
-                        <HandCoins className="h-5 w-5" />
-                      </div>
-                      <span className="font-bold">Sponsors</span>
-                    </Link>
-              <Link
-                href="/admin/levels"
-                onClick={() => setMobileOpen(false)}
-                className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
-                  pathname.startsWith("/admin/levels")
-                    ? "bg-emerald-900 text-white shadow-md"
-                    : "text-slate-700 hover:bg-emerald-900 hover:text-white"
-                }`}
-              >
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
-                    pathname.startsWith("/admin/levels")
-                      ? "bg-white/10"
-                      : "bg-emerald-50 group-hover:bg-white/10"
-                  }`}
-                >
-                  <Layers3 className="h-5 w-5" />
-                </div>
-                <span className="font-bold">Levels</span>
-              </Link>
+            </div>
+          </div>
 
-              <Link
-                href="/admin/promotions"
-                onClick={() => setMobileOpen(false)}
-                className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
-                  pathname.startsWith("/admin/promotions")
-                    ? "bg-emerald-900 text-white shadow-md"
-                    : "text-slate-700 hover:bg-emerald-900 hover:text-white"
-                }`}
-              >
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
-                    pathname.startsWith("/admin/promotions")
-                      ? "bg-white/10"
-                      : "bg-emerald-50 group-hover:bg-white/10"
-                  }`}
-                >
-                  <GraduationCap className="h-5 w-5" />
-                </div>
-                <span className="font-bold">Promotions</span>
-              </Link>
-            </nav>
+          {/* LESSONS */}
+          <Link
+            href="/admin/lessons"
+            onClick={() => setMobileOpen(false)}
+            className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
+              pathname.startsWith("/admin/lessons")
+                ? "bg-emerald-900 text-white shadow-md"
+                : "text-slate-700 hover:bg-emerald-900 hover:text-white"
+            }`}
+          >
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                pathname.startsWith("/admin/lessons")
+                  ? "bg-white/10"
+                  : "bg-emerald-50 group-hover:bg-white/10"
+              }`}
+            >
+              <BookOpen className="h-5 w-5" />
+            </div>
+
+            <span className="font-bold">Lessons</span>
+          </Link>
+
+          {/* SPONSORS */}
+          <Link
+            href="/admin/sponsors"
+            onClick={() => setMobileOpen(false)}
+            className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
+              pathname.startsWith("/admin/sponsors")
+                ? "bg-emerald-900 text-white shadow-md"
+                : "text-slate-700 hover:bg-emerald-900 hover:text-white"
+            }`}
+          >
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                pathname.startsWith("/admin/sponsors")
+                  ? "bg-white/10"
+                  : "bg-emerald-50 group-hover:bg-white/10"
+              }`}
+            >
+              <HandCoins className="h-5 w-5" />
+            </div>
+
+            <span className="font-bold">Sponsors</span>
+          </Link>
+
+          {/* LEVELS */}
+          <Link
+            href="/admin/levels"
+            onClick={() => setMobileOpen(false)}
+            className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
+              pathname.startsWith("/admin/levels")
+                ? "bg-emerald-900 text-white shadow-md"
+                : "text-slate-700 hover:bg-emerald-900 hover:text-white"
+            }`}
+          >
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                pathname.startsWith("/admin/levels")
+                  ? "bg-white/10"
+                  : "bg-emerald-50 group-hover:bg-white/10"
+              }`}
+            >
+              <Layers3 className="h-5 w-5" />
+            </div>
+
+            <span className="font-bold">Levels</span>
+          </Link>
+
+          {/* PROMOTIONS */}
+          <Link
+            href="/admin/promotions"
+            onClick={() => setMobileOpen(false)}
+            className={`group flex items-center gap-4 rounded-2xl px-4 py-4 transition ${
+              pathname.startsWith("/admin/promotions")
+                ? "bg-emerald-900 text-white shadow-md"
+                : "text-slate-700 hover:bg-emerald-900 hover:text-white"
+            }`}
+          >
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                pathname.startsWith("/admin/promotions")
+                  ? "bg-white/10"
+                  : "bg-emerald-50 group-hover:bg-white/10"
+              }`}
+            >
+              <GraduationCap className="h-5 w-5" />
+            </div>
+
+            <span className="font-bold">Promotions</span>
+          </Link>
+        </nav>
           </div>
 
           {/* Sidebar footer */}

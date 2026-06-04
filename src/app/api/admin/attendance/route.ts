@@ -16,12 +16,11 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams
 
     const search = searchParams.get("search") || ""
-    const sponsored = searchParams.get("sponsored") || ""
     const trackType = searchParams.get("trackType") || ""
-    const gender = searchParams.get("gender") || ""
     const learningMode = searchParams.get("learningMode") || ""
     const quranLevel = searchParams.get("quranLevel") || ""
     const kitabLevel = searchParams.get("kitabLevel") || ""
+    const scheduleId = searchParams.get("scheduleId") || ""
     const date =
       searchParams.get("date") || new Date().toISOString().split("T")[0]
 
@@ -55,16 +54,6 @@ export async function GET(req: NextRequest) {
               ],
             }
           : {}),
-        ...(sponsored
-          ? {
-              isSponsored: sponsored === "true",
-            }
-          : {}),
-        ...(gender
-          ? {
-              gender: gender as any,
-            }
-          : {}),
         ...(learningMode
           ? {
               learningMode: learningMode as any,
@@ -95,6 +84,15 @@ export async function GET(req: NextRequest) {
                 some: {
                   trackType: "KITAB",
                   levelId: kitabLevel,
+                },
+              },
+            }
+          : {}),
+        ...(scheduleId
+          ? {
+              studentLevels: {
+                some: {
+                  scheduleId,
                 },
               },
             }

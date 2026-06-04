@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react"
 import {
   CheckCircle2,
   Clock3,
-  Filter,
   GraduationCap,
   Search,
   ShieldCheck,
@@ -67,6 +66,14 @@ type Student = {
   studentLevels?: StudentLevel[]
   attendance?: AttendanceRecord[]
   attendanceStatus?: "PRESENT" | "ABSENT" | "PERMISSION" | null
+}
+
+type ScheduleOption = {
+  id: string
+  label: string
+  trackType: "QURAN" | "KITAB"
+  mode?: "ONLINE" | "IN_PERSON" | "BOTH"
+  sessions: ScheduleSession[]
 }
 
 function formatSessions(schedule?: ScheduleGroup | null) {
@@ -293,12 +300,11 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true)
 
   const [search, setSearch] = useState("")
-  const [sponsored, setSponsored] = useState("")
   const [trackType, setTrackType] = useState("")
-  const [gender, setGender] = useState("")
   const [learningMode, setLearningMode] = useState("")
   const [quranLevel, setQuranLevel] = useState("")
   const [kitabLevel, setKitabLevel] = useState("")
+  const [scheduleId, setScheduleId] = useState("")
 
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
@@ -317,12 +323,11 @@ export default function AttendancePage() {
 
     const params = new URLSearchParams()
     if (search) params.set("search", search)
-    if (sponsored) params.set("sponsored", sponsored)
     if (trackType) params.set("trackType", trackType)
-    if (gender) params.set("gender", gender)
     if (learningMode) params.set("learningMode", learningMode)
     if (quranLevel) params.set("quranLevel", quranLevel)
     if (kitabLevel) params.set("kitabLevel", kitabLevel)
+    if (scheduleId) params.set("scheduleId", scheduleId)
     if (date) params.set("date", date)
 
     const res = await fetch(`/api/admin/attendance?${params.toString()}`)
@@ -349,16 +354,7 @@ export default function AttendancePage() {
   useEffect(() => {
     loadStudents()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    search,
-    sponsored,
-    trackType,
-    gender,
-    learningMode,
-    quranLevel,
-    kitabLevel,
-    date,
-  ])
+  }, [search, trackType, learningMode, quranLevel, kitabLevel, scheduleId, date])
 
   async function markAttendance(
     studentId: string,
@@ -398,7 +394,6 @@ export default function AttendancePage() {
   const summary = useMemo(() => {
     return {
       total: students.length,
-      sponsored: students.filter((s) => s.isSponsored).length,
       quran: students.filter((s) =>
         s.studentLevels?.some((sl) => sl.trackType === "QURAN")
       ).length,
@@ -425,8 +420,36 @@ export default function AttendancePage() {
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
   }, [levels])
 
+  const scheduleOptions = useMemo(() => {
+    const map = new Map<string, ScheduleOption>()
+
+    students.forEach((student) => {
+      student.studentLevels?.forEach((sl) => {
+        if (!sl.schedule) return
+        if (!map.has(sl.schedule.id)) {
+          map.set(sl.schedule.id, {
+            id: sl.schedule.id,
+            label: sl.schedule.label,
+            trackType: sl.trackType,
+            mode: sl.schedule.mode,
+            sessions: sl.schedule.sessions || [],
+          })
+        }
+      })
+    })
+
+    return Array.from(map.values())
+  }, [students])
+
   function getRowStatus(student: Student) {
     return attendanceMap[student.id] || student.attendanceStatus || null
+  }
+
+  function statusLabel(status: "PRESENT" | "ABSENT" | "PERMISSION" | null) {
+    if (status === "PRESENT") return "Present"
+    if (status === "ABSENT") return "Absent"
+    if (status === "PERMISSION") return "Permission"
+    return "Not marked"
   }
 
   return (
@@ -439,11 +462,11 @@ export default function AttendancePage() {
               Attendance
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              Mark attendance and clearly see which students are already marked.
+              Mark attendance and filter students by level, learning mode, and schedule.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100">
@@ -461,12 +484,12 @@ export default function AttendancePage() {
             <div className="rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100">
-                  <ShieldCheck className="h-5 w-5 text-emerald-700" />
+                  <CheckCircle2 className="h-5 w-5 text-emerald-700" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500">Sponsored</p>
+                  <p className="text-sm text-slate-500">Marked</p>
                   <h2 className="text-2xl font-black text-slate-900">
-                    {summary.sponsored}
+                    {summary.marked}
                   </h2>
                 </div>
               </div>
@@ -495,20 +518,6 @@ export default function AttendancePage() {
                   <p className="text-sm text-slate-500">Kitab</p>
                   <h2 className="text-2xl font-black text-slate-900">
                     {summary.kitab}
-                  </h2>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-700" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Marked</p>
-                  <h2 className="text-2xl font-black text-slate-900">
-                    {summary.marked}
                   </h2>
                 </div>
               </div>
@@ -549,21 +558,6 @@ export default function AttendancePage() {
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Sponsored
-            </label>
-            <select
-              value={sponsored}
-              onChange={(e) => setSponsored(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none"
-            >
-              <option value="">All Sponsorships</option>
-              <option value="true">Sponsored</option>
-              <option value="false">Self Sponsored</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
               Track
             </label>
             <select
@@ -574,23 +568,6 @@ export default function AttendancePage() {
               <option value="">All Tracks</option>
               <option value="QURAN">Quran</option>
               <option value="KITAB">Kitab</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Gender
-            </label>
-            <select
-              value={gender}
-              onChange={(e) => setGender(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none"
-            >
-              <option value="">All Genders</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
-              <option value="OTHER">Other</option>
-              <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
             </select>
           </div>
 
@@ -641,6 +618,24 @@ export default function AttendancePage() {
               {kitabLevelOptions.map((level) => (
                 <option key={level.id} value={level.id}>
                   {level.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="xl:col-span-2">
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Schedule
+            </label>
+            <select
+              value={scheduleId}
+              onChange={(e) => setScheduleId(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none"
+            >
+              <option value="">All Schedules</option>
+              {scheduleOptions.map((schedule) => (
+                <option key={schedule.id} value={schedule.id}>
+                  {schedule.label} — {schedule.trackType}
                 </option>
               ))}
             </select>
@@ -757,23 +752,19 @@ export default function AttendancePage() {
                         </td>
 
                         <td className="px-6 py-5">
-                          {currentStatus ? (
-                            <span
-                              className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                                currentStatus === "PRESENT"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : currentStatus === "ABSENT"
-                                    ? "bg-rose-100 text-rose-700"
-                                    : "bg-amber-100 text-amber-700"
-                              }`}
-                            >
-                              {currentStatus}
-                            </span>
-                          ) : (
-                            <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                              Not marked
-                            </span>
-                          )}
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                              currentStatus === "PRESENT"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : currentStatus === "ABSENT"
+                                  ? "bg-rose-100 text-rose-700"
+                                  : currentStatus === "PERMISSION"
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {statusLabel(currentStatus)}
+                          </span>
                         </td>
 
                         <td className="px-6 py-5">
